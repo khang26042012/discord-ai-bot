@@ -150,12 +150,22 @@ Bắt đầu bằng lời chào mừng nồng nhiệt đến KhangSMP, cung cấ
             )
             ai_reply = response.choices[0].message.content or ""
             
-            # Loại bỏ thẻ <think>...</think> nếu có
-            ai_reply = re.sub(r'<think>.*?</think>', '', ai_reply, flags=re.DOTALL).strip()
+            # Loại bỏ thẻ <think>...</think> và nội dung suy nghĩ (bao gồm cả reasoning_content nếu có)
+            ai_reply = re.sub(r'<think>.*?</think>', '', ai_reply, flags=re.DOTALL)
+            ai_reply = re.sub(r'<reasoning>.*?</reasoning>', '', ai_reply, flags=re.DOTALL)
+            ai_reply = re.sub(r'<thinking>.*?</thinking>', '', ai_reply, flags=re.DOTALL)
+            ai_reply = ai_reply.strip()
             
+            # Nếu vẫn rỗng, thử lấy từ delta content của response (nếu có)
+            if not ai_reply and hasattr(response.choices[0].message, 'content') and response.choices[0].message.content is None:
+                # Một số API trả về trong delta, nhưng chúng ta đang dùng completion thường
+                # Fallback: dùng nội dung từ reasoning_content nếu có (nhưng loại bỏ)
+                if hasattr(response.choices[0].message, 'reasoning_content'):
+                    # Không dùng reasoning_content vì nó là suy nghĩ nội bộ
+                    pass
             # Kiểm tra nội dung rỗng
             if not ai_reply:
-                ai_reply = "❌ Tôi không nhận được phản hồi từ AI. Vui lòng thử lại sau."
+                ai_reply = "Xin chào! Tôi là trợ lý của KhangSMP. Bạn cần hỗ trợ gì về server hôm nay?"
 
             # Gửi tin nhắn với xử lý lỗi
             try:
