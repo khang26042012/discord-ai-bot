@@ -37,7 +37,10 @@ if not TOKEN:
 # Initialize OpenAI Client for Xkiro API
 ai_client = AsyncOpenAI(
     api_key=XKIRO_API_KEY,
-    base_url=XKIRO_BASE_URL
+    base_url=XKIRO_BASE_URL,
+    default_headers={
+        "X-Provider": "qwen"
+    }
 )
 
 # Bot configuration
