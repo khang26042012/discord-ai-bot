@@ -76,6 +76,12 @@ async def on_member_join(member):
         await channel.send(f"Chào mừng {member.mention} đã đến với server, chúc bạn có một trải nghiệm vui vẻ, đừng quên pick role. Cần hỗ trợ cứ alo bot chuột dthw nha")
 
 @bot.event
+async def on_member_remove(member):
+    channel = bot.get_channel(SEE_YOU_CHANNEL_ID)
+    if channel is not None:
+        await channel.send(f"Xin lỗi {member.mention}! Tôi đã không giữ chân bạn được, cảm ơn bạn đã đồng hành cùng server! Nếu có duyên chúng ta sẽ gặp lại")
+
+@bot.event
 async def on_message(message: discord.Message):
     # Ignore own messages or other bot messages
     if message.author == bot.user or message.author.bot:
