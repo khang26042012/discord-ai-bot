@@ -39,7 +39,7 @@ ai_client = AsyncOpenAI(
     api_key=XKIRO_API_KEY,
     base_url=XKIRO_BASE_URL,
     default_headers={
-        "X-Provider": "qwen"
+        "X-Provider": "deepseek"
     }
 )
 
@@ -149,6 +149,10 @@ Bắt đầu bằng lời chào mừng nồng nhiệt đến KhangSMP, cung cấ
             )
             ai_reply = response.choices[0].message.content
             
+            # Kiểm tra nội dung rỗng
+            if not ai_reply or not ai_reply.strip():
+                ai_reply = "❌ Tôi không nhận được phản hồi từ AI. Vui lòng thử lại sau."
+
             # Split message if exceeds Discord's 2000 character limit
             if len(ai_reply) <= 2000:
                 await message.reply(ai_reply)
