@@ -4,6 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
 # Setup logging
 logging.basicConfig(
@@ -20,9 +21,24 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 ALLOWED_CHANNEL_ID_RAW = os.getenv("ALLOWED_CHANNEL_ID")
 ALLOWED_CHANNEL_ID = int(ALLOWED_CHANNEL_ID_RAW) if ALLOWED_CHANNEL_ID_RAW and ALLOWED_CHANNEL_ID_RAW.isdigit() else None
 
+ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-y5zxt8-e19fe90c")
+ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "qwen/qwen-plus-2025-07-28")
+
+# Use ROUTER_* variables for the AI client
+XKIRO_API_KEY = ROUTER_API_KEY
+XKIRO_BASE_URL = ROUTER_BASE_URL
+XKIRO_MODEL = ROUTER_MODEL
+
 if not TOKEN:
     logger.error("DISCORD_TOKEN is missing in environment variables!")
     sys.exit(1)
+
+# Initialize OpenAI Client for Xkiro API
+ai_client = AsyncOpenAI(
+    api_key=XKIRO_API_KEY,
+    base_url=XKIRO_BASE_URL
+)
 
 # Bot configuration
 intents = discord.Intents.default()
@@ -35,6 +51,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 async def on_ready():
     logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
     logger.info(f"Target Channel ID: {ALLOWED_CHANNEL_ID}")
+    logger.info(f"Xkiro Model: {XKIRO_MODEL}")
     
     # Sync slash commands
     try:
@@ -43,11 +60,11 @@ async def on_ready():
     except Exception as e:
         logger.error(f"Failed to sync slash commands: {e}")
         
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="commands"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="tin nhắn AI"))
 
 @bot.event
 async def on_message(message: discord.Message):
-    # Ignore own messages
+    # Ignore own messages or other bot messages
     if message.author == bot.user or message.author.bot:
         return
 
@@ -55,8 +72,32 @@ async def on_message(message: discord.Message):
     if ALLOWED_CHANNEL_ID is not None and message.channel.id != ALLOWED_CHANNEL_ID:
         return
 
-    # Process standard prefix commands
-    await bot.process_commands(message)
+    # Process standard prefix commands if message starts with prefix
+    if message.content.startswith(bot.command_prefix):
+        await bot.process_commands(message)
+        return
+
+    # Call Xkiro AI API for any text message in the allowed channel
+    async with message.channel.typing():
+        try:
+            response = await ai_client.chat.completions.create(
+                model=XKIRO_MODEL,
+                messages=[
+                    {"role": "system", "content": "Bạn là một trợ lý AI Discord thông minh, hữu ích, thân thiện và lịch sự."},
+                    {"role": "user", "content": message.content}
+                ]
+            )
+            ai_reply = response.choices[0].message.content
+            
+            # Split message if exceeds Discord's 2000 character limit
+            if len(ai_reply) <= 2000:
+                await message.reply(ai_reply)
+            else:
+                for i in range(0, len(ai_reply), 1900):
+                    await message.channel.send(ai_reply[i:i+1900])
+        except Exception as e:
+            logger.error(f"Error calling Xkiro AI API: {e}")
+            await message.reply(f"❌ Có lỗi xảy ra khi gọi AI: `{e}`")
 
 # ================= Slash Commands =================
 
@@ -85,13 +126,13 @@ async def info_slash(interaction: discord.Interaction):
         return
 
     embed = discord.Embed(
-        title="🤖 Thông Tin Bot",
+        title="🤖 Thông Tin AI Bot",
         color=discord.Color.blue()
     )
     embed.add_field(name="Bot User", value=f"{bot.user.name}", inline=True)
     embed.add_field(name="Kênh hoạt động", value=f"<#{ALLOWED_CHANNEL_ID}>" if ALLOWED_CHANNEL_ID else "Tất cả", inline=True)
-    embed.add_field(name="Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
-    embed.set_footer(text="Railway Deployed Discord Bot")
+    embed.add_field(name="AI Model", value=f"`{XKIRO_MODEL}`", inline=True)
+    embed.set_footer(text="Railway Deployed Discord AI Bot")
     await interaction.response.send_message(embed=embed)
 
 @bot.tree.command(name="help", description="Danh sách các lệnh có sẵn")
