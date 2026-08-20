@@ -23,7 +23,7 @@ ALLOWED_CHANNEL_ID = int(ALLOWED_CHANNEL_ID_RAW) if ALLOWED_CHANNEL_ID_RAW and A
 
 ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-lccea8-b96faa63")
 ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/qwen/qwen3.7-plus")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/deepseek/deepseek-v4-flash")
 
 # Use ROUTER_* variables for the AI client
 XKIRO_API_KEY = ROUTER_API_KEY
