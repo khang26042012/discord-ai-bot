@@ -1,0 +1,478 @@
+topics:
+
+  # ==================================================
+  # 1. THÔNG TIN CHUNG
+  # ==================================================
+
+  - id: server_info
+    aliases:
+      - server
+      - thông tin server
+      - giới thiệu
+      - khangsmp
+      - ip
+      - địa chỉ server
+      - java
+      - bedrock
+      - pe
+      - port
+      - discord
+      - owner
+      - admin
+      - chủ server
+      - bảo trì
+
+    title: Thông tin chung về KhangSMP
+
+    content: |
+      Tên server: KhangSMP
+
+      Địa chỉ IP (Java & Bedrock):
+      nvnmc.asia
+
+      Port:
+      25655
+
+      Phiên bản hỗ trợ:
+      Minecraft 1.16 trở lên (hỗ trợ cả Java và Bedrock)
+
+      Chủ server / Owner / Admin:
+      Phan Trọng Khang (đang sinh sống tại Vĩnh Long)
+
+      Discord chính thức:
+      https://discord.gg/4afmVDmy2
+
+      TikTok của Owner:
+      @phantrongkhangg
+
+      Mọi thông báo bảo trì, cập nhật và sự kiện đều được đăng trên Discord.
+
+  # ==================================================
+  # 2. HƯỚNG DẪN NGƯỜI CHƠI MỚI
+  # ==================================================
+
+  - id: getting_started
+    aliases:
+      - newbie
+      - người mới
+      - tân thủ
+      - bắt đầu
+      - hướng dẫn
+      - chơi như thế nào
+      - kit
+
+    title: Hướng dẫn người chơi mới
+
+    content: |
+      Khi mới vào server bạn sẽ xuất hiện tại Spawn (khu vực trung tâm, không có NPC).
+
+      Hướng dẫn từng bước:
+
+      1. Nhận kit tân thủ:
+         /kit newbie
+
+      2. Đi ra khỏi vùng an toàn (đánh dấu bằng len đỏ) để bắt đầu sinh tồn.
+         Hoặc dùng /rtp để dịch chuyển ngẫu nhiên.
+
+      3. Tìm vị trí phù hợp rồi xây nhà.
+
+      4. Dùng Xẻng Vàng Claim đất ngay sau khi xây nhà.
+
+      5. Đặt Home:
+         /sethome
+
+      6. Tham gia Discord để nhận hỗ trợ:
+         https://discord.gg/4afmVDmy2
+
+      Lưu ý quan trọng:
+      - Giới hạn Claim: tối đa 1000 claim blocks
+      - Rank chỉ do Admin cấp, không thể mua
+      - Server có Keep Inventory (không mất đồ khi chết)
+      - Cooldown các lệnh dịch chuyển: 3 giây
+
+  # ==================================================
+  # 3. CÁC LỆNH CƠ BẢN
+  # ==================================================
+
+  - id: commands
+    aliases:
+      - command
+      - commands
+      - lệnh
+      - help
+
+    title: Các lệnh cơ bản
+
+    content: |
+      === Dịch chuyển ===
+      /spawn          - Về Spawn
+      /warp           - Mở danh sách Warp
+      /rtp            - Dịch chuyển ngẫu nhiên (Overworld)
+      /home [tên]     - Về Home
+      /homes          - Xem danh sách Home
+      /sethome [tên]  - Đặt Home
+      /delhome [tên]  - Xóa Home
+      /back           - Quay lại vị trí vừa chết
+
+      === TPA ===
+      /tpa <tên>      - Gửi yêu cầu dịch chuyển
+      /tpaccept       - Chấp nhận
+      /tpdeny         - Từ chối
+
+      === Chat & Tiện ích ===
+      /msg <tên>      - Nhắn tin riêng
+      /reply          - Trả lời người vừa nhắn
+      /ignore <tên>   - Chặn/Bỏ chặn tin nhắn
+
+      === Kinh tế ===
+      /balance        - Xem số dư
+      /pay <tên> <số> - Chuyển tiền
+      /shop           - Mở Shop mua đồ
+      /sellgui        - Mở rương bán đồ
+      /sellall        - Bán toàn bộ (không khuyến khích)
+
+      === Khác ===
+      /kit newbie     - Nhận bộ đồ khởi đầu
+      /claimslist     - Xem số claim blocks còn lại và danh sách claim
+
+      Lưu ý: Hầu hết lệnh dịch chuyển có cooldown 3 giây.
+
+  # ==================================================
+  # 4. CLAIM ĐẤT
+  # ==================================================
+
+  - id: claim
+    aliases:
+      - claim
+      - grief
+      - griefprevention
+      - xẻng vàng
+      - golden shovel
+      - bảo vệ đất
+      - claimslist
+
+    title: Claim đất (GriefPrevention)
+
+    content: |
+      Server sử dụng plugin GriefPrevention.
+
+      Cách tạo Claim:
+      - Cầm Xẻng Vàng
+      - Chuột phải vào hai góc đối diện của khu vực cần bảo vệ
+
+      Cách mở rộng Claim:
+      - Dùng Xẻng Vàng chuột phải vào cạnh Claim hiện có
+
+      Giới hạn:
+      - Mỗi người chơi tối đa 1000 claim blocks
+      - Không thể Claim chồng lên Claim của người khác
+      - Không thể Claim trong vùng cấm (Spawn và một số khu vực đặc biệt)
+
+      Kiểm tra số Claim blocks còn lại:
+      /claimslist
+      (Hiển thị số blocks đã dùng, còn lại và danh sách claim)
+
+      Các lệnh quản lý quyền:
+      /trust <tên>           - Cho phép xây dựng
+      /untrust <tên>         - Thu hồi toàn bộ quyền
+      /accesstrust <tên>     - Cho phép sử dụng cửa, nút, cần gạt
+      /containertrust <tên>  - Cho phép mở rương, lò nung...
+      /trustlist             - Xem danh sách người được cấp quyền
+      /abandonclaim          - Xóa Claim đang đứng
+      /abandonallclaims      - Xóa toàn bộ Claim của bạn
+
+  # ==================================================
+  # 5. RANK
+  # ==================================================
+
+  - id: ranks
+    aliases:
+      - rank
+      - cấp bậc
+      - media
+
+    title: Rank
+
+    content: |
+      Hiện tại server có các rank:
+
+      • Member   - Rank mặc định
+      • Media    - Rank dành cho người làm nội dung
+      • Owner    - Chủ server
+
+      Lưu ý:
+      - Rank chỉ được Owner/Admin (Phan Trọng Khang) cấp trực tiếp
+      - Không thể mua Rank bằng tiền thật hoặc tiền trong game
+
+  # ==================================================
+  # 6. SHOP & KINH TẾ
+  # ==================================================
+
+  - id: shop
+    aliases:
+      - shop
+      - sell
+      - sellgui
+      - sellall
+      - cửa hàng
+      - mua
+      - bán
+      - kiếm tiền
+      - economy
+
+    title: Shop & Kinh tế
+
+    content: |
+      Server sử dụng EconomyShopGUI.
+
+      Lệnh chính:
+      /shop       - Mở cửa hàng mua đồ
+      /sellgui    - Mở rương bán đồ (bỏ vật phẩm vào → đóng rương là bán)
+      /sellall    - Bán toàn bộ vật phẩm có thể bán trong túi
+
+      Cảnh báo:
+      Admin khuyến khích KHÔNG nên dùng /sellall vì rất dễ bán nhầm vật phẩm quan trọng.
+
+      Thông tin thêm:
+      - Shop có nhiều danh mục vật phẩm
+      - Giá mua/bán do Admin quyết định, không có thời gian cố định thay đổi
+      - Một số vật phẩm không thể bán
+      - Người chơi hiện tại chưa thể tạo Shop riêng
+      - Server sẽ bổ sung tính năng Trade trong tương lai
+
+      Cách kiếm tiền:
+      - Đào quặng, farm, săn mob rồi bán qua /sellgui hoặc mua bán qua /shop
+
+  # ==================================================
+  # 7. WARP & RTP
+  # ==================================================
+
+  - id: warp_rtp
+    aliases:
+      - warp
+      - rtp
+      - nether
+      - teleport
+      - dịch chuyển
+
+    title: Warp & RTP
+
+    content: |
+      === Warp ===
+      Hiện tại server chỉ có 1 Warp:
+      /warp nether
+
+      === RTP ===
+      /rtp
+      - Dịch chuyển ngẫu nhiên trong Overworld
+      - Có thể dùng ở bất kỳ đâu trong Overworld
+      - Không nên dùng tại Nether hoặc The End (vị trí ngẫu nhiên rất nguy hiểm)
+      - Có cooldown 3 giây
+
+      Sau khi RTP hoặc tìm được vị trí đẹp, hãy Claim đất ngay.
+
+  # ==================================================
+  # 8. HOME
+  # ==================================================
+
+  - id: home
+    aliases:
+      - home
+      - sethome
+      - delhome
+      - homes
+      - homelist
+
+    title: Home
+
+    content: |
+      /sethome [tên]   - Đặt Home
+      /home [tên]      - Dịch chuyển về Home
+      /delhome [tên]   - Xóa Home
+      /homes           - Xem danh sách tất cả Home
+
+      Hiện tại server không giới hạn số lượng Home.
+      Lệnh /home và /sethome có cooldown 3 giây.
+
+  # ==================================================
+  # 9. TPA
+  # ==================================================
+
+  - id: tpa
+    aliases:
+      - tpa
+      - tpaccept
+      - tpdeny
+
+    title: TPA
+
+    content: |
+      /tpa <tên người chơi>   - Gửi yêu cầu dịch chuyển
+      /tpaccept               - Chấp nhận yêu cầu
+      /tpdeny                 - Từ chối yêu cầu
+
+      Có cooldown 3 giây.
+
+  # ==================================================
+  # 10. PVP
+  # ==================================================
+
+  - id: pvp
+    aliases:
+      - pvp
+      - đánh nhau
+      - combat
+
+    title: PvP
+
+    content: |
+      Server có bật PvP.
+
+      Quy tắc:
+      - Chỉ được PvP ở ngoài vùng Lobby (Spawn)
+      - Không được PvP trong Home của người khác nếu chưa dính combat
+      - Nếu đã dính PvP ở ngoài rồi chạy vào Home của người khác thì vẫn tính combat
+      - Ở trong Home mà chưa dính PvP từ trước thì không thể bắt đầu PvP
+
+  # ==================================================
+  # 11. FAQ - CÂU HỎI THƯỜNG GẶP
+  # ==================================================
+
+  - id: faq
+    aliases:
+      - faq
+      - câu hỏi thường gặp
+      - lỗi
+      - không được
+
+    title: FAQ - Câu hỏi thường gặp
+
+    content: |
+      Không phá được block?
+      → Bạn đang ở Spawn hoặc trong Claim của người khác.
+
+      Không mở được rương / cửa?
+      → Bạn chưa được chủ Claim cấp quyền (/containertrust hoặc /accesstrust).
+
+      Không Claim được?
+      → Có thể do: đang ở vùng cấm, Claim bị chồng, hoặc đã hết 1000 claim blocks.
+      → Kiểm tra bằng lệnh: /claimslist
+
+      Kiếm tiền như thế nào?
+      → Đào quặng, farm, săn mob rồi bán bằng /sellgui hoặc mua bán qua /shop.
+
+      Có mất đồ khi chết không?
+      → Không. Server có Keep Inventory.
+
+      Làm sao về Spawn?
+      → /spawn
+
+      RTP dùng ở đâu?
+      → Chỉ nên dùng ở Overworld. Không nên dùng ở Nether/End.
+
+      Cần hỗ trợ thêm?
+      → Tham gia Discord: https://discord.gg/4afmVDmy2
+
+  # ==================================================
+  # 12. NỘI QUY
+  # ==================================================
+
+  - id: rules
+    aliases:
+      - nội quy
+      - rules
+      - hack
+      - cheat
+      - vi phạm
+
+    title: Nội quy Server
+
+    content: |
+      Nghiêm cấm các hành vi sau:
+
+      • Sử dụng Hack / Cheat / Client bất hợp pháp
+      • Bug Abuse (lợi dụng lỗi)
+      • Duplication (nhân bản vật phẩm)
+      • Grief (phá hoại công trình người khác)
+      • Spam chat
+      • Quảng cáo server khác
+      • Phá hoại trải nghiệm của người chơi khác
+      • Lừa đảo, chiếm đoạt tài sản người khác
+
+      Vi phạm sẽ bị xử lý tùy theo mức độ nghiêm trọng (cảnh cáo, mute, kick, ban).
+
+  # ==================================================
+  # 13. LIÊN HỆ
+  # ==================================================
+
+  - id: contact
+    aliases:
+      - discord
+      - liên hệ
+      - support
+      - tiktok
+      - hỗ trợ
+
+    title: Liên hệ & Hỗ trợ
+
+    content: |
+      Discord chính thức (khuyến nghị):
+      https://discord.gg/4afmVDmy2
+
+      Chủ server:
+      Phan Trọng Khang
+
+      TikTok:
+      @phantrongkhangg
+
+  # ==================================================
+  # 14. BẢO TRÌ & CẬP NHẬT
+  # ==================================================
+
+  - id: maintenance
+    aliases:
+      - bảo trì
+      - maintenance
+      - update
+      - cập nhật
+      - sự kiện
+
+    title: Bảo trì & Cập nhật
+
+    content: |
+      Mọi thông báo về bảo trì, cập nhật phiên bản, sự kiện đều được đăng trên Discord chính thức.
+
+      Discord: https://discord.gg/4afmVDmy2
+
+  # ==================================================
+  # 15. DANH SÁCH PLUGIN
+  # ==================================================
+
+  - id: plugins
+    aliases:
+      - plugin
+      - plugins
+      - hệ thống
+
+    title: Plugin đang sử dụng
+
+    content: |
+      Essentials
+      BetterRTP
+      GriefPrevention
+      EconomyShopGUI
+      LuckPerms
+      Vault
+      WorldEdit
+      WorldGuard
+      Geyser
+      ViaVersion
+      ViaBackwards
+      PlaceholderAPI
+      DecentHolograms
+      EntityClearer
+      Chunky
+      BetterKeepInventory
+      TAB
+      Spark
+      SkBee
