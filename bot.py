@@ -39,7 +39,7 @@ ai_client = AsyncOpenAI(
     api_key=XKIRO_API_KEY,
     base_url=XKIRO_BASE_URL,
     default_headers={
-        "X-Provider": "qwen"
+        "X-Provider": "anthropic"
     }
 )
 
