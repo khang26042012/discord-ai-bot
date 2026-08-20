@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import re
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -147,18 +148,25 @@ Bắt đầu bằng lời chào mừng nồng nhiệt đến KhangSMP, cung cấ
                     {"role": "user", "content": message.content}
                 ]
             )
-            ai_reply = response.choices[0].message.content
+            ai_reply = response.choices[0].message.content or ""
+            
+            # Loại bỏ thẻ <think>...</think> nếu có
+            ai_reply = re.sub(r'<think>.*?</think>', '', ai_reply, flags=re.DOTALL).strip()
             
             # Kiểm tra nội dung rỗng
-            if not ai_reply or not ai_reply.strip():
+            if not ai_reply:
                 ai_reply = "❌ Tôi không nhận được phản hồi từ AI. Vui lòng thử lại sau."
 
-            # Split message if exceeds Discord's 2000 character limit
-            if len(ai_reply) <= 2000:
-                await message.reply(ai_reply)
-            else:
-                for i in range(0, len(ai_reply), 1900):
-                    await message.channel.send(ai_reply[i:i+1900])
+            # Gửi tin nhắn với xử lý lỗi
+            try:
+                if len(ai_reply) <= 2000:
+                    await message.reply(ai_reply)
+                else:
+                    for i in range(0, len(ai_reply), 1900):
+                        await message.channel.send(ai_reply[i:i+1900])
+            except discord.HTTPException as e:
+                logger.error(f"Failed to send message: {e}")
+                await message.reply("❌ Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.")
         except Exception as e:
             logger.error(f"Error calling Xkiro AI API: {e}")
             await message.reply(f"❌ Có lỗi xảy ra khi gọi AI: `{e}`")
