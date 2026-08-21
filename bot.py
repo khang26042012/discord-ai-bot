@@ -896,6 +896,113 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
     embed = view.build_preview_embed()
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
+# Subcommand: list
+@customrole_group.command(name="list", description="Liệt kê tất cả custom role trong server")
+@discord.app_commands.default_permissions(manage_roles=True)
+@discord.app_commands.guild_only()
+async def customrole_list(interaction: discord.Interaction):
+    # Check manager permission
+    if not await check_manager_interaction(interaction):
+        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        return
+
+    # Lấy danh sách custom role từ MongoDB
+    guild_str = str(interaction.guild_id)
+    role_ids = await load_custom_roles()
+    guild_roles = role_ids.get(guild_str, [])
+
+    if not guild_roles:
+        await interaction.response.send_message("ℹ️ Server chưa có custom role nào. Hãy tạo role bằng `/customrole create`.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="📋 Danh sách Custom Role",
+        description=f"Server có **{len(guild_roles)}** custom role:",
+        color=discord.Color.blue()
+    )
+
+    role_list = []
+    for role_id in guild_roles:
+        role = interaction.guild.get_role(role_id)
+        if role:
+            role_list.append(f"• {role.mention} (ID: {role.id})")
+        else:
+            role_list.append(f"• ❌ Role {role_id} không còn tồn tại (đã bị xóa)")
+
+    if role_list:
+        # Discord embed giới hạn 1024 ký tự mỗi field, chia thành nhiều field nếu cần
+        chunk = []
+        for line in role_list:
+            if len("\n".join(chunk + [line])) > 900:
+                embed.add_field(name="\u200b", value="\n".join(chunk), inline=False)
+                chunk = []
+            chunk.append(line)
+        if chunk:
+            embed.add_field(name="\u200b", value="\n".join(chunk), inline=False)
+
+    embed.set_footer(text=f"Tổng số: {len(guild_roles)} role")
+    await interaction.response.send_message(embed=embed)
+
+# Subcommand: list
+@customrole_group.command(name="list", description="Liệt kê tất cả custom role trong server")
+@discord.app_commands.default_permissions(manage_roles=True)
+@discord.app_commands.guild_only()
+async def customrole_list(interaction: discord.Interaction):
+    # Check manager permission
+    if not await check_manager_interaction(interaction):
+        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        return
+
+    data = await load_custom_roles()
+    guild_str = str(interaction.guild_id)
+    role_ids = data.get(guild_str, [])
+    
+    logger.info(f"📋 /customrole list: guild_id={guild_str}, role_ids={role_ids}")
+
+    if not role_ids:
+        await interaction.response.send_message("ℹ️ Server chưa có custom role nào.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="📋 Danh sách Custom Role",
+        description=f"Tổng cộng: {len(role_ids)} role",
+        color=discord.Color.blue()
+    )
+
+    role_list = []
+    for role_id in role_ids:
+        role = interaction.guild.get_role(role_id)
+        if role:
+            role_list.append(f"• {role.mention} (`{role_id}`)")
+        else:
+            role_list.append(f"• `{role_id}` (⚠️ Role đã bị xóa khỏi server)")
+
+    # Discord embed field value tối đa 1024 ký tự
+    if role_list:
+        chunk = "\n".join(role_list)
+        if len(chunk) <= 1024:
+            embed.add_field(name="Role", value=chunk, inline=False)
+        else:
+            # Chia thành nhiều field
+            chunks = []
+            current = []
+            current_len = 0
+            for line in role_list:
+                line_len = len(line) + 1
+                if current_len + line_len > 1000:
+                    chunks.append("\n".join(current))
+                    current = [line]
+                    current_len = line_len
+                else:
+                    current.append(line)
+                    current_len += line_len
+            if current:
+                chunks.append("\n".join(current))
+            for i, chunk in enumerate(chunks):
+                embed.add_field(name=f"Role (phần {i+1})", value=chunk, inline=False)
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
 # Subcommand: remove
 @customrole_group.command(name="remove", description="Xóa một custom role")
 @discord.app_commands.default_permissions(manage_roles=True)
