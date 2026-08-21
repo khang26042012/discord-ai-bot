@@ -25,14 +25,15 @@ class GroqClient:
         self.model = model
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"
 
-    async def chat_completion(self, messages: List[Dict[str, str]], json_mode: bool = True) -> Optional[str]:
+    async def chat_completion(self, messages: List[Dict[str, str]], json_mode: bool = True, retries: int = 1) -> Optional[str]:
         if not self.api_key:
             logger.error("GROQ_API_KEY is not configured.")
             return None
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         }
         data: Dict[str, Any] = {
             "model": self.model,
@@ -42,23 +43,35 @@ class GroqClient:
         if json_mode:
             data["response_format"] = {"type": "json_object"}
 
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(self.base_url, headers=headers, json=data, timeout=12) as resp:
-                    if resp.status != 200:
-                        text = await resp.text()
-                        logger.error(f"Groq API error {resp.status}: {text}")
-                        return None
-                    res_json = await resp.json()
-                    content = res_json["choices"][0]["message"]["content"]
-                    # Clean markdown
-                    content = re.sub(r"^```json\s*", "", content, flags=re.MULTILINE)
-                    content = re.sub(r"^```\s*", "", content, flags=re.MULTILINE)
-                    content = re.sub(r"```$", "", content, flags=re.MULTILINE).strip()
-                    return content
-        except Exception as e:
-            logger.error(f"Error calling Groq API: {e}")
-            return None
+        for attempt in range(retries + 1):
+            try:
+                logger.info(f"Sending Groq API Request (Attempt {attempt+1}/{retries+1}) | Model: {self.model}")
+                logger.debug(f"Groq Messages: {json.dumps(messages, ensure_ascii=False)}")
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(self.base_url, headers=headers, json=data, timeout=12) as resp:
+                        raw_text = await resp.text()
+                        logger.info(f"Groq API Response Status: {resp.status} | Raw Content: {raw_text}")
+                        if resp.status != 200:
+                            logger.error(f"Groq API error HTTP {resp.status}: {raw_text}")
+                            if attempt < retries:
+                                await asyncio.sleep(1)
+                                continue
+                            return None
+
+                        res_json = json.loads(raw_text)
+                        content = res_json["choices"][0]["message"]["content"]
+                        # Clean markdown
+                        content = re.sub(r"^```json\s*", "", content, flags=re.MULTILINE)
+                        content = re.sub(r"^```\s*", "", content, flags=re.MULTILINE)
+                        content = re.sub(r"```$", "", content, flags=re.MULTILINE).strip()
+                        return content
+            except Exception as e:
+                logger.error(f"Exception calling Groq API (Attempt {attempt+1}): {e}")
+                if attempt < retries:
+                    await asyncio.sleep(1)
+                    continue
+                return None
+        return None
 
     async def validate_starter_phrase(self, phrase: str) -> Dict[str, Any]:
         """Validate starter phrase: 2 Vietnamese syllables."""
@@ -95,10 +108,34 @@ YÊU CẦU BẮT BUỘC:
             logger.error(f"JSON parse error in validate_starter_phrase: {e}")
             return {"valid": len(words) == 2, "reason": "Cụm từ phải đúng 2 tiếng.", "last_syllable": words[1] if len(words) == 2 else None}
 
-    async def validate_and_next_singleplayer(self, current_word: str, expected_first_syllable: str, used_words: Set[str]) -> Dict[str, Any]:
+    async def validate_and_next_singleplayer(self, current_word: str, expected_first_syllable: str, used_words: Set[str], is_starter: bool = False) -> Dict[str, Any]:
         """Validate player word and generate AI response for Singleplayer mode."""
         used_list_str = ", ".join(list(used_words))
-        sys_prompt = f"""Bạn là trọng tài và đối thủ trò chơi Nối Từ Tiếng Việt.
+        
+        if is_starter:
+            # When current_word is starter phrase (e.g. "Trồng cây"), current_word IS valid already.
+            # AI just needs to generate the next word starting with expected_first_syllable (e.g. "cây")
+            sys_prompt = f"""Bạn là đối thủ trò chơi Nối Từ Tiếng Việt.
+Người chơi vừa ra đề bằng cụm từ: '{current_word}'.
+Nhiệm vụ của bạn:
+1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG để nối tiếp.
+2. Cụm từ của bạn BẮT BUỘC phải bắt đầu bằng tiếng: '{expected_first_syllable}'.
+3. Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+4. Tránh từ Hán Việt quá hiếm. Chỉ kèm giải nghĩa ngắn trong ngoặc nếu dùng từ khó.
+
+Trả về duy nhất định dạng JSON:
+{{
+  "valid": true,
+  "reason": "",
+  "ai_word": "Cụm 2 tiếng nối tiếp của AI",
+  "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
+}}"""
+            messages = [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": f"Ra đề: '{current_word}'. Bạn hãy nối tiếp từ bắt đầu bằng '{expected_first_syllable}'."}
+            ]
+        else:
+            sys_prompt = f"""Bạn là trọng tài và đối thủ trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC CHO NGƯỜI CHƠI:
 1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT.
 2. Tiếng thứ nhất BẮT BUỘC phải khớp chính xác với: '{expected_first_syllable}'.
@@ -118,18 +155,19 @@ Trả về duy nhất định dạng JSON:
   "ai_word": "Cụm 2 tiếng nối tiếp của AI (nếu valid=true)",
   "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
 }}"""
-        messages = [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": f"Người chơi gửi: '{current_word}'"}
-        ]
+            messages = [
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": f"Người chơi gửi: '{current_word}'"}
+            ]
+
         res = await self.chat_completion(messages, json_mode=True)
         if not res:
-            return {"valid": False, "reason": "Không thể kết nối AI kiểm tra. Vui lòng thử lại!"}
+            return {"valid": False, "reason": "Không thể kết nối API AI (timeout/network error)."}
 
         try:
             return json.loads(res)
         except Exception as e:
-            logger.error(f"JSON parse error in validate_and_next_singleplayer: {e}")
+            logger.error(f"JSON parse error in validate_and_next_singleplayer: {e} | Raw content: {res}")
             return {"valid": False, "reason": "Lỗi định dạng dữ liệu kiểm tra từ AI."}
 
     async def validate_multiplayer_word(self, current_word: str, expected_first_syllable: str, used_words: Set[str]) -> Dict[str, Any]:
@@ -403,12 +441,15 @@ async def handle_noitu_message(message: discord.Message):
                 await message.add_reaction("✅")
                 state.used_words.add(content.lower())
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
-                last_syl = val["last_syllable"]
+                words = content.split()
+                expected_last_syllable = words[-1]
                 state.status = "PLAYING"
 
-                # AI turn to respond
-                ai_res = await groq_client.validate_and_next_singleplayer(content, content.split()[-1], state.used_words)
+                # AI turn to respond to starter phrase: expected first syllable is the last word of starter phrase!
+                ai_res = await groq_client.validate_and_next_singleplayer(content, expected_last_syllable, state.used_words, is_starter=True)
                 if not ai_res.get("valid") or not ai_res.get("ai_word"):
+                    reason_msg = ai_res.get("reason", "")
+                    logger.warning(f"AI failed to respond to starter phrase '{content}': {reason_msg}")
                     await message.channel.send(f"🎉 **AI KHÔNG NỐI TIẾP ĐƯỢC CỤM TỪ!** {message.author.mention} ĐÃ THẮNG CUỘC!")
                     await finish_game(message.channel, state, winner_text=f"{message.author.mention}")
                     return
