@@ -351,9 +351,20 @@ def apply_wrapper(text: str, wrapper_value: str) -> str:
 def load_custom_roles():
     try:
         with open(CUSTOM_ROLES_FILE, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+        # Kiểm tra định dạng: nếu data không phải là dict, reset về {}
+        if not isinstance(data, dict):
+            logger.warning(f"Phát hiện data JSON sai định dạng (kiểu {type(data).__name__}), đang reset về {}")
+            data = {}
+            save_custom_roles(data)
+        return data
     except FileNotFoundError:
         return {}
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}, resetting file to {{}}")
+        data = {}
+        save_custom_roles(data)
+        return data
 
 def save_custom_roles(data):
     with open(CUSTOM_ROLES_FILE, "w") as f:
@@ -377,10 +388,12 @@ def remove_custom_role(guild_id, role_id):
 
 def get_custom_role_count(guild_id):
     data = load_custom_roles()
+    # Đảm bảo data là dict (load_custom_roles đã xử lý)
     return len(data.get(str(guild_id), []))
 
 def is_custom_role(guild_id, role_id):
     data = load_custom_roles()
+    # Đảm bảo data là dict (load_custom_roles đã xử lý)
     return role_id in data.get(str(guild_id), [])
 
 async def get_color_info(hex_color):
