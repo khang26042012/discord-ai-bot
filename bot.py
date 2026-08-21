@@ -3,15 +3,14 @@ import sys
 import logging
 import re
 import json
-import asyncio
 import aiohttp
 import discord
 from discord.ext import commands
-from discord import app_commands
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from discord.ui import View, Button
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 # Setup logging
 logging.basicConfig(
@@ -317,7 +316,7 @@ async def ping_prefix(ctx: commands.Context):
 MAX_CUSTOM_ROLES = int(os.getenv("MAX_CUSTOM_ROLES", 250))
 CUSTOM_ROLES_FILE = "custom_roles.json"
 COLOR_API_BASE = "https://www.thecolorapi.com"
-_color_cache = {}
+_color_cache: dict[str, tuple[str, datetime]] = {}
 
 # Regex phát hiện tiếng Việt có dấu
 VIETNAMESE_DIACRITICS_REGEX = re.compile(
@@ -391,7 +390,7 @@ async def get_color_info(hex_color):
     if len(hex_color) != 6:
         raise ValueError("Mã màu hex không hợp lệ (phải là 3 hoặc 6 ký tự)")
     hex_color = hex_color.upper()
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     if hex_color in _color_cache:
         cached_name, cached_time = _color_cache[hex_color]
         if (now - cached_time) < timedelta(minutes=5):
@@ -407,7 +406,7 @@ async def get_color_info(hex_color):
                     return {"name": name, "hex": f"#{hex_color}"}
                 else:
                     return {"name": f"#{hex_color}", "hex": f"#{hex_color}"}
-        except:
+        except Exception:
             return {"name": f"#{hex_color}", "hex": f"#{hex_color}"}
 
 async def get_random_color():
@@ -422,7 +421,7 @@ async def get_random_color():
                     return {"name": name, "hex": f"#{hex_val}"}
                 else:
                     return None
-        except:
+        except Exception:
             return None
 
 # Common colors for autocomplete
@@ -588,43 +587,10 @@ STYLE_MAPS = {
     },
 }
 
-# Hàm phát hiện tiếng Việt có dấu
-import unicodedata
+# Hàm apply_wrapper và has_vietnamese_diacritics đã được định nghĩa ở đầu file
+# (dòng 328 và 345). Các định nghĩa trùng lặp ở đây bị xóa.
 
-def has_vietnamese_diacritics(text: str) -> bool:
-    """Kiểm tra xem chuỗi có chứa ký tự có dấu tiếng Việt không."""
-    # Các ký tự có dấu cơ bản: ă, â, đ, ê, ô, ơ, ư và các biến thể có dấu thanh
-    vietnamese_chars = set("ăâđêôơưĂÂĐÊÔƠƯ")
-    # Kiểm tra từng ký tự
-    for char in text:
-        # Kiểm tra trực tiếp
-        if char in vietnamese_chars:
-            return True
-        # Kiểm tra ký tự tổ hợp (ví dụ: ấ, ầ, ẩ, ẫ, ậ...)
-        try:
-            name = unicodedata.name(char)
-            # Tìm các từ khóa: COMBINING, ACUTE, GRAVE, HOOK, TILDE, DOT, ...
-            if "COMBINING" in name:
-                return True
-        except ValueError:
-            pass
-        # Nếu ký tự là Latin và có dấu thanh (Unicode tổ hợp hoặc tiền tổ hợp)
-        if unicodedata.combining(char):
-            return True
-    # Nếu không có ký tự có dấu, trả về False
-    return False
-
-# Các mẫu trang trí viền cho tên có dấu
-DECORATIVE_WRAPPERS = [
-    {"label": "♡ ... ♡", "value": "heart", "prefix": "♡ ", "suffix": " ♡"},
-    {"label": "꒰ঌ ... ໒꒱", "value": "wings", "prefix": "꒰ঌ ", "suffix": " ໒꒱"},
-    {"label": "⋆˚꩜｡ ...", "value": "galaxy", "prefix": "⋆˚꩜｡ ", "suffix": ""},
-    {"label": "🌿 ...", "value": "sprout", "prefix": "🌿 ", "suffix": ""},
-    {"label": "༄ ... ༄", "value": "wind", "prefix": "༄ ", "suffix": " ༄"},
-    {"label": "★ ... ★", "value": "star", "prefix": "★ ", "suffix": " ★"},
-    {"label": "【 ... 】", "value": "bracket", "prefix": "【", "suffix": "】"},
-    {"label": "┊ ... ┊", "value": "border", "prefix": "┊", "suffix": "┊"},
-]
+# Định nghĩa DECORATIVE_WRAPPERS đã có ở dòng 333, không cần lặp lại.
 
 def apply_decorative_wrapper(text: str, wrapper_index: int) -> str:
     """Áp dụng một mẫu trang trí viền cho chuỗi text."""
@@ -633,19 +599,7 @@ def apply_decorative_wrapper(text: str, wrapper_index: int) -> str:
     wrapper = DECORATIVE_WRAPPERS[wrapper_index]
     return wrapper["prefix"] + text + wrapper["suffix"]
 
-def apply_wrapper(text: str, wrapper_value: str) -> str:
-    """Áp dụng wrapper theo value (tên định danh)."""
-    for w in DECORATIVE_WRAPPERS:
-        if w.get("value") == wrapper_value:
-            return w["prefix"] + text + w["suffix"]
-    return text  # fallback: giữ nguyên nếu không tìm thấy
-
-def apply_wrapper(text: str, wrapper_value: str) -> str:
-    """Áp dụng wrapper theo value (tên định danh)."""
-    for w in DECORATIVE_WRAPPERS:
-        if w["value"] == wrapper_value:
-            return w["prefix"] + text + w["suffix"]
-    return text  # fallback: giữ nguyên nếu không tìm thấy
+# apply_wrapper đã được định nghĩa ở dòng 345, không lặp lại.
 
 def apply_style(text, style):
     if style == "Normal" or style not in STYLE_MAPS:
@@ -655,7 +609,7 @@ def apply_style(text, style):
 
 # Select Menu chọn Style/Viền tương ứng dựa trên loại tên (có dấu / không dấu)
 class StyleSelect(discord.ui.Select):
-    def __init__(self, is_vn: bool, initial_selection: str = None):
+    def __init__(self, is_vn: bool, initial_selection: Optional[str] = None):
         self.is_vn = is_vn
         options = []
         if is_vn:
