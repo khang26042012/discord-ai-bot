@@ -73,6 +73,34 @@ class GroqClient:
                 return None
         return None
 
+    async def is_real_vietnamese_word(self, word: str) -> bool:
+        """Independent 2nd-layer validation: Check if a phrase is a genuine, common Vietnamese 2-syllable word."""
+        if not word or len(word.strip().split()) != 2:
+            return False
+
+        sys_prompt = """Bạn là từ điển tiếng Việt chuẩn.
+Nhiệm vụ: Trả lời xem cụm từ ghép 2 tiếng dưới đây có phải là từ ghép/từ phức CÓ TRONG TỪ ĐIỂN TIẾNG VIỆT HOẶC ĐỜI SỐNG HÀNG NGÀY KHÔNG.
+
+Ví dụ hợp lệ (is_real: true): 'nhung hươu', 'nhung gấm', 'nhung lụa', 'khắc khoải', 'trồng cây', 'yêu thương', 'thương nhớ'.
+Ví dụ GIẢ/VÔ NGHĨA (is_real: false): 'khoải hứng', 'nhung nhau', 'cây ghế', 'chơi gà', 'đẹp nhà'.
+
+Trả về JSON duy nhất: {"is_real": true/false}"""
+
+        messages = [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": f"Cụm từ: '{word}'"}
+        ]
+        res = await self.chat_completion(messages, json_mode=True)
+        if not res:
+            return True # Fallback if API fails
+
+        try:
+            data = json.loads(res)
+            return bool(data.get("is_real", False))
+        except Exception as e:
+            logger.error(f"Error in is_real_vietnamese_word: {e}")
+            return True
+
     async def validate_starter_phrase(self, phrase: str) -> Dict[str, Any]:
         """Validate starter phrase: 2 Vietnamese syllables."""
         sys_prompt = """Bạn là trọng tài trò chơi Nối Từ Tiếng Việt.
@@ -116,21 +144,22 @@ YÊU CẦU BẮT BUỘC:
         clean_exp_first = clean_syllable(expected_first_syllable)
         
         if is_starter:
-            # When current_word is starter phrase (e.g. "Trồng cây"), current_word IS valid already.
-            # AI just needs to generate the next word starting with expected_first_syllable (e.g. "cây")
             sys_prompt = f"""Bạn là đối thủ trò chơi Nối Từ Tiếng Việt.
 Người chơi vừa ra đề bằng cụm từ: '{current_word}'.
 Nhiệm vụ của bạn:
-1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG để nối tiếp.
+1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT CÓ THẬT, THÔNG DỤNG TRONG TỪ ĐIỂN để nối tiếp.
 2. Cụm từ của bạn BẮT BUỘC phải bắt đầu bằng tiếng: '{clean_exp_first}'.
 3. Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt viết hoa/thường): [{used_list_str}].
-4. Tránh từ Hán Việt quá hiếm. Chỉ kèm giải nghĩa ngắn trong ngoặc nếu dùng từ khó.
+
+⛔ CẤM BỊA TỪ (RẤT NGHIÊM NGẠC):
+- TUYỆT ĐỐI CẤM ghép 2 tiếng ngẫu nhiên vô nghĩa chỉ để đúng âm đầu (Ví dụ: CẤM 'khoải hứng', 'nhung nhau', 'cây ghế').
+- Nếu không tìm thấy từ ghép 2 tiếng CÓ THẬT TRONG TỪ ĐIỂN khớp với '{clean_exp_first}', bạn PHẢI CHẤP NHẬN THUA bằng cách trả về valid: false. THỪA NHẬN THUA LÀ ĐÚNG QUY TẮC, KHÔNG ĐƯỢC BỊA TỪ NÉ THUA.
 
 Trả về duy nhất định dạng JSON:
 {{
-  "valid": true,
-  "reason": "",
-  "ai_word": "Cụm 2 tiếng nối tiếp của AI",
+  "valid": true/false,
+  "reason": "Lý do nếu thua / không có từ thật",
+  "ai_word": "Cụm 2 tiếng nối tiếp CÓ THẬT của AI (nếu valid=true)",
   "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
 }}"""
             messages = [
@@ -140,22 +169,20 @@ Trả về duy nhất định dạng JSON:
         else:
             sys_prompt = f"""Bạn là trọng tài và đối thủ trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC CHO NGƯỜI CHƠI:
-1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT.
-2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (LƯU Ý: KHÔNG PHÂN BIỆT VIẾT HOA/VIẾT THƯỜNG. Ví dụ: 'Được', 'được', 'ĐƯỢC' đều là CÙNG 1 tiếng và HOÀN TOÀN HỢP LỆ).
-3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt hoa/thường): [{used_list_str}].
-4. Cụm từ phải có nghĩa thực tế trong tiếng Việt thông dụng.
+1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT CÓ THẬT, THÔNG DỤNG.
+2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (KHÔNG PHÂN BIỆT VIẾT HOA/THƯỜNG).
+3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
 
-NẾU CỤM TỪ CỦA NGƯỜI CHƠI HỢP LỆ (valid=true):
-- Lấy tiếng thứ 2 trong cụm từ của người chơi làm tiếng đầu cho lượt của bạn.
-- Bạn hãy tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG, DỄ NỐI TIẾP để nối lại.
-- Tránh từ Hán Việt hiếm, từ chuyên ngành. Chỉ dùng từ khó hơn khi BẮT BUỘC, và kèm chú thích nghĩa ngắn trong ngoặc, ví dụ: 'kỳ dị (lạ lùng)'.
-- Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+QUY TẮC BẮT BUỘC CHO AI (BẠN):
+- Tìm 1 CỤM 2 TIẾNG CÓ THẬT TRONG TỪ ĐIỂN TIẾNG VIỆT để nối lại.
+- TUYỆT ĐỐI CẤM ghép bừa 2 tiếng vô nghĩa để né thua (CẤM 'khoải hứng', 'nhung nhau',...).
+- Nếu không tìm được từ thật, hãy trả về valid: false để chấp nhận thua cuộc.
 
 Trả về duy nhất định dạng JSON:
 {{
   "valid": true/false,
-  "reason": "Lý do nếu không hợp lệ (không khớp từ / đã dùng / không có nghĩa / không đủ 2 tiếng)",
-  "ai_word": "Cụm 2 tiếng nối tiếp của AI (nếu valid=true)",
+  "reason": "Lý do nếu không hợp lệ",
+  "ai_word": "Cụm 2 tiếng nối tiếp CÓ THẬT của AI (nếu valid=true)",
   "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
 }}"""
             messages = [
@@ -168,7 +195,15 @@ Trả về duy nhất định dạng JSON:
             return {"valid": False, "reason": "Không thể kết nối API AI (timeout/network error)."}
 
         try:
-            return json.loads(res)
+            data = json.loads(res)
+            ai_word = data.get("ai_word")
+            if data.get("valid") and ai_word:
+                # 2nd-layer validation for AI word
+                is_real = await self.is_real_vietnamese_word(ai_word)
+                if not is_real:
+                    logger.warning(f"AI generatedfake/invalid word '{ai_word}'. Rejecting AI word!")
+                    return {"valid": False, "reason": f"Cụm từ '{ai_word}' không phải là từ ghép tiếng Việt có thật."}
+            return data
         except Exception as e:
             logger.error(f"JSON parse error in validate_and_next_singleplayer: {e} | Raw content: {res}")
             return {"valid": False, "reason": "Lỗi định dạng dữ liệu kiểm tra từ AI."}
@@ -179,15 +214,15 @@ Trả về duy nhất định dạng JSON:
         clean_exp_first = clean_syllable(expected_first_syllable)
         sys_prompt = f"""Bạn là trọng tài trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC:
-1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG.
-2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (LƯU Ý: KHÔNG PHÂN BIỆT VIẾT HOA/VIẾT THƯỜNG. Ví dụ: 'Được', 'được', 'ĐƯỢC' đều là CÙNG 1 tiếng và HOÀN TOÀN HỢP LỆ).
-3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt hoa/thường): [{used_list_str}].
-4. Cụm từ phải có nghĩa trong tiếng Việt.
+1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT CÓ THẬT, THÔNG DỤNG trong từ điển và đời sống.
+2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (KHÔNG PHÂN BIỆT VIẾT HOA/THƯỜNG).
+3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+4. Cụm từ phải có nghĩa thực tế trong tiếng Việt. TUYỆT ĐỐI KHÔNG chấp nhận cụm từ ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau', 'chơi gà',...).
 
 Trả về duy nhất định dạng JSON:
 {{
   "valid": true/false,
-  "reason": "Lý do ngắn gọn nếu sai (không đúng tiếng đầu / đã dùng / không có nghĩa / không đủ 2 tiếng)",
+  "reason": "Lý do ngắn gọn nếu sai (không có nghĩa / không đúng tiếng đầu / đã dùng / không đủ 2 tiếng)",
   "last_syllable": "Tiếng thứ 2 của cụm từ vừa gửi (nếu valid=true)"
 }}"""
         messages = [
@@ -205,8 +240,16 @@ Trả về duy nhất định dạng JSON:
             data = json.loads(res)
             last_syl = data.get("last_syllable")
             cleaned_last = clean_syllable(last_syl) if last_syl else (words[1] if len(words) == 2 else None)
+            is_valid = bool(data.get("valid", False))
+
+            if is_valid:
+                # 2nd-layer validation for Player word in Multiplayer
+                is_real = await self.is_real_vietnamese_word(current_word)
+                if not is_real:
+                    return {"valid": False, "reason": f"Cụm từ '{current_word}' không phải từ ghép tiếng Việt có thật.", "last_syllable": None}
+
             return {
-                "valid": bool(data.get("valid", False)),
+                "valid": is_valid,
                 "reason": str(data.get("reason", "Cụm từ không hợp lệ.")),
                 "last_syllable": cleaned_last
             }
@@ -511,6 +554,14 @@ async def handle_noitu_message(message: discord.Message):
                 if not val["valid"]:
                     await message.add_reaction("❌")
                     await message.reply(f"❌ {message.author.mention} Vui lòng gửi lại từ nối khác! Lý do: {val['reason']}")
+                    state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    return
+
+                # 2nd-layer validation for Player's word in Singleplayer
+                is_real_player = await groq_client.is_real_vietnamese_word(content)
+                if not is_real_player:
+                    await message.add_reaction("❌")
+                    await message.reply(f"❌ {message.author.mention} Cụm từ **'{content}'** không phải là từ ghép tiếng Việt có thật! Vui lòng chọn từ khác.")
                     state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 
