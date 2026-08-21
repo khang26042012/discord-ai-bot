@@ -386,7 +386,7 @@ def apply_wrapper(text: str, wrapper_value: str) -> str:
     return text
 
 async def load_custom_roles():
-    if not db:
+    if db is None:
         return {}
     try:
         doc = await db.custom_roles.find_one({"_id": "all"})
@@ -398,7 +398,7 @@ async def load_custom_roles():
         return {}
 
 async def save_custom_roles(data):
-    if not db:
+    if db is None:
         return
     try:
         await db.custom_roles.update_one(
@@ -975,7 +975,7 @@ bot.tree.add_command(customrole_group)
 # ================= Migration from JSON to MongoDB =================
 async def migrate_json_to_mongodb():
     """Migrate data from JSON files to MongoDB if they exist and MongoDB is empty."""
-    if not db:
+    if db is None:
         return
     # Check if we already have data in MongoDB
     existing = await db.custom_roles.find_one({"_id": "all"})
@@ -1019,7 +1019,7 @@ async def migrate_json_to_mongodb():
 PANELS_FILE = "panels.json"
 
 async def load_panels():
-    if not db:
+    if db is None:
         return {}
     try:
         doc = await db.panels.find_one({"_id": "all"})
@@ -1031,7 +1031,7 @@ async def load_panels():
         return {}
 
 async def save_panels(data):
-    if not db:
+    if db is None:
         return
     try:
         await db.panels.update_one(
