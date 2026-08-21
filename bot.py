@@ -769,6 +769,9 @@ class ConfirmView(View):
         await self.interaction.edit_original_response(content="❌ Đã hủy tạo custom role.", embed=None, view=self)
         await button_interaction.response.send_message("Đã hủy thành công.", ephemeral=True)
 
+# Define the customrole command group
+customrole_group = discord.app_commands.Group(name="customrole", description="Quản lý custom role (yêu cầu quyền Manage Roles)")
+
 # Subcommand: create
 @customrole_group.command(name="create", description="Tạo một custom role với tên và màu tùy chọn")
 @discord.app_commands.default_permissions(manage_roles=True)
