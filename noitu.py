@@ -292,7 +292,7 @@ async def start_noitu_game(interaction: discord.Interaction):
         ),
         color=discord.Color.gold()
     )
-    embed.set_footer(text="Hệ thống chấm/ra đề tự động bởi Groq AI")
+    embed.set_footer(text="Hệ thống chấm/ra đề tự động bởi Chuột dethw 🐭")
 
     view = LobbyJoinView(channel_id, timeout=30.0)
     await interaction.response.send_message(embed=embed, view=view)
@@ -359,7 +359,7 @@ async def singleplayer_timeout_handler(channel: discord.TextChannel, state: NoiT
                 return
 
             await channel.send(f"⏰ <@{user_id}> đã **quá 20 giây** không đưa ra cụm từ hợp lệ! Bạn đã THUA CUỘC.")
-            await finish_game(channel, state, winner_text="Groq AI 🤖")
+            await finish_game(channel, state, winner_text="Chuột dethw 🐭")
     except asyncio.CancelledError:
         pass
 
@@ -456,10 +456,10 @@ async def handle_noitu_message(message: discord.Message):
 
                 ai_word = ai_res["ai_word"]
                 state.used_words.add(ai_word.lower())
-                state.used_words_history.append(f"🤖 Groq AI: {ai_word}")
+                state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
                 state.last_syllable = ai_word.strip().split()[-1]
 
-                await message.channel.send(f"🤖 **Groq AI:** `{ai_word}`")
+                await message.channel.send(f"🐭 **Chuột dethw:** `{ai_word}`")
                 await message.channel.send(f"👉 Tới lượt {message.author.mention}! Cần nối cụm từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
                 state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
 
@@ -483,10 +483,10 @@ async def handle_noitu_message(message: discord.Message):
                     return
 
                 state.used_words.add(ai_word.lower())
-                state.used_words_history.append(f"🤖 Groq AI: {ai_word}")
+                state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
                 state.last_syllable = ai_word.strip().split()[-1]
 
-                await message.channel.send(f"🤖 **Groq AI:** `{ai_word}`")
+                await message.channel.send(f"🐭 **Chuột dethw:** `{ai_word}`")
                 await message.channel.send(f"👉 Tới lượt {message.author.mention}! Cần nối cụm từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
                 state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
 
