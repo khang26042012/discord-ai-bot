@@ -74,21 +74,24 @@ class GroqClient:
         return None
 
     async def is_real_vietnamese_word(self, word: str) -> bool:
-        """Independent 2nd-layer validation: Check if a phrase is a genuine, common Vietnamese 2-syllable word."""
+        """Independent 2nd-layer validation: Check if a phrase is a natural, meaningful Vietnamese 2-syllable phrase used in daily speech."""
         if not word or len(word.strip().split()) != 2:
             return False
 
-        sys_prompt = """Bạn là từ điển tiếng Việt chuẩn.
-Nhiệm vụ: Trả lời xem cụm từ ghép 2 tiếng dưới đây có phải là từ ghép/từ phức CÓ TRONG TỪ ĐIỂN TIẾNG VIỆT HOẶC ĐỜI SỐNG HÀNG NGÀY KHÔNG.
+        sys_prompt = """Bạn là trọng tài ngôn ngữ tiếng Việt.
+Nhiệm vụ: Trả lời xem cụm 2 tiếng dưới đây có phải là cách nói tự nhiên, có nghĩa thực tế mà người Việt thực sự dùng trong giao tiếp hàng ngày hay không (bao gồm từ ghép, cụm tính từ, cụm danh từ, phó từ thông dụng).
 
-Ví dụ hợp lệ (is_real: true): 'nhung hươu', 'nhung gấm', 'nhung lụa', 'khắc khoải', 'trồng cây', 'yêu thương', 'thương nhớ'.
-Ví dụ GIẢ/VÔ NGHĨA (is_real: false): 'khoải hứng', 'nhung nhau', 'cây ghế', 'chơi gà', 'đẹp nhà'.
+Ví dụ HOÀN TOÀN HỢP LỆ (is_real: true):
+- 'đẹp quá', 'đẹp lắm', 'to lắm', 'vui vẻ', 'xa xôi', 'nhung hươu', 'trồng cây', 'yêu thương', 'đẹp trai', 'ăn cơm'.
 
-Trả về JSON duy nhất: {"is_real": true/false}"""
+Ví dụ GIẢ / BỊA VÔ NGHĨA (is_real: false):
+- 'khoải hứng', 'nhung nhau', 'cây ghế', 'đẹp nhà'.
+
+Trả về duy nhất JSON: {"is_real": true/false}"""
 
         messages = [
             {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": f"Cụm từ: '{word}'"}
+            {"role": "user", "content": f"Cụm từ: '{word}' có phải cách nói tự nhiên, thông dụng trong tiếng Việt không?"}
         ]
         res = await self.chat_completion(messages, json_mode=True)
         if not res:
@@ -147,42 +150,44 @@ YÊU CẦU BẮT BUỘC:
             sys_prompt = f"""Bạn là đối thủ trò chơi Nối Từ Tiếng Việt.
 Người chơi vừa ra đề bằng cụm từ: '{current_word}'.
 Nhiệm vụ của bạn:
-1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT CÓ THẬT, THÔNG DỤNG TRONG TỪ ĐIỂN để nối tiếp.
-2. Cụm từ của bạn BẮT BUỘC phải bắt đầu bằng tiếng: '{clean_exp_first}'.
+1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT TỰ NHIÊN, CÓ NGHĨA THỰC TẾ (bao gồm từ ghép, cụm tính từ, cụm danh từ thông dụng) để nối tiếp.
+2. Cụm từ của bạn BẮT BUỘC phải BẮT ĐẦU BẰNG TIẾNG: '{clean_exp_first}' (LƯU Ý CỰC KỲ QUAN TRỌNG: TIẾNG ĐẦU TIÊN TRONG CỤM TỪ CỦA BẠN PHẢI LÀ '{clean_exp_first}', KHÔNG ĐƯỢC DÙNG TIẾNG ĐẦU NÀO KHÁC!).
 3. Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt viết hoa/thường): [{used_list_str}].
 
-⛔ CẤM BỊA TỪ (RẤT NGHIÊM NGẠC):
-- TUYỆT ĐỐI CẤM ghép 2 tiếng ngẫu nhiên vô nghĩa chỉ để đúng âm đầu (Ví dụ: CẤM 'khoải hứng', 'nhung nhau', 'cây ghế').
-- Nếu không tìm thấy từ ghép 2 tiếng CÓ THẬT TRONG TỪ ĐIỂN khớp với '{clean_exp_first}', bạn PHẢI CHẤP NHẬN THUA bằng cách trả về valid: false. THỪA NHẬN THUA LÀ ĐÚNG QUY TẮC, KHÔNG ĐƯỢC BỊA TỪ NÉ THUA.
+⛔ CẤM BỊA TỪ VÀ CẤM SAI TIẾNG ĐẦU:
+- TIẾNG ĐẦU TIÊN của cụm từ bạn chọn BẮT BUỘC KHỚP VỚI '{clean_exp_first}'. Ví dụ: nếu yêu cầu bắt đầu bằng 'lắm', cụm từ của bạn PHẢI là 'lắm chuyện', 'lắm lời' (BẮT ĐẦU BẰNG 'lắm'). CẤM không được chọn 'đẹp trai' khi yêu cầu là 'lắm'!
+- TUYỆT ĐỐI CẤM ghép 2 tiếng ngẫu nhiên vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
+- Nếu không tìm thấy cụm từ hợp lệ bắt đầu bằng '{clean_exp_first}', bạn PHẢI CHẤP NHẬN THUA bằng cách trả về valid: false.
 
 Trả về duy nhất định dạng JSON:
 {{
   "valid": true/false,
-  "reason": "Lý do nếu thua / không có từ thật",
-  "ai_word": "Cụm 2 tiếng nối tiếp CÓ THẬT của AI (nếu valid=true)",
+  "reason": "Lý do nếu thua",
+  "ai_word": "Cụm 2 tiếng bắt đầu bằng '{clean_exp_first}' của AI (nếu valid=true)",
   "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
 }}"""
             messages = [
                 {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": f"Ra đề: '{current_word}'. Bạn hãy nối tiếp từ bắt đầu bằng '{clean_exp_first}'."}
+                {"role": "user", "content": f"Ra đề: '{current_word}'. Bạn hãy nối tiếp cụm 2 tiếng BẮT ĐẦU BẰNG TIẾNG '{clean_exp_first}'."}
             ]
         else:
             sys_prompt = f"""Bạn là trọng tài và đối thủ trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC CHO NGƯỜI CHƠI:
-1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT CÓ THẬT, THÔNG DỤNG.
+1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT TỰ NHIÊN, CÓ NGHĨA.
 2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (KHÔNG PHÂN BIỆT VIẾT HOA/THƯỜNG).
 3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
 
 QUY TẮC BẮT BUỘC CHO AI (BẠN):
-- Tìm 1 CỤM 2 TIẾNG CÓ THẬT TRONG TỪ ĐIỂN TIẾNG VIỆT để nối lại.
-- TUYỆT ĐỐI CẤM ghép bừa 2 tiếng vô nghĩa để né thua (CẤM 'khoải hứng', 'nhung nhau',...).
-- Nếu không tìm được từ thật, hãy trả về valid: false để chấp nhận thua cuộc.
+1. Cụm từ của bạn BẮT BUỘC PHẢI BẮT ĐẦU BẰNG TIẾNG THỨ 2 CỦA NGƯỜI CHƠI.
+2. Cụm từ phải là CỤM 2 TIẾNG TỰ NHIÊN, CÓ NGHĨA THỰC TẾ.
+3. TUYỆT ĐỐI CẤM ghép bừa 2 tiếng vô nghĩa để né thua (CẤM 'khoải hứng', 'nhung nhau').
+4. Nếu không tìm được từ hợp lệ, hãy trả về valid: false để chấp nhận thua cuộc.
 
 Trả về duy nhất định dạng JSON:
 {{
   "valid": true/false,
   "reason": "Lý do nếu không hợp lệ",
-  "ai_word": "Cụm 2 tiếng nối tiếp CÓ THẬT của AI (nếu valid=true)",
+  "ai_word": "Cụm 2 tiếng nối tiếp của AI (nếu valid=true)",
   "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
 }}"""
             messages = [
@@ -198,11 +203,17 @@ Trả về duy nhất định dạng JSON:
             data = json.loads(res)
             ai_word = data.get("ai_word")
             if data.get("valid") and ai_word:
+                # Code-level Enforce First Syllable Match for AI word!
+                ai_words = [clean_syllable(w) for w in ai_word.strip().split() if clean_syllable(w)]
+                if len(ai_words) != 2 or ai_words[0] != clean_exp_first:
+                    logger.warning(f"AI returned word '{ai_word}' which does NOT start with required syllable '{clean_exp_first}'. Rejecting!")
+                    return {"valid": False, "reason": f"AI đưa ra cụm từ '{ai_word}' không bắt đầu bằng tiếng '{clean_exp_first}'."}
+
                 # 2nd-layer validation for AI word
                 is_real = await self.is_real_vietnamese_word(ai_word)
                 if not is_real:
-                    logger.warning(f"AI generatedfake/invalid word '{ai_word}'. Rejecting AI word!")
-                    return {"valid": False, "reason": f"Cụm từ '{ai_word}' không phải là từ ghép tiếng Việt có thật."}
+                    logger.warning(f"AI generated fake/invalid word '{ai_word}'. Rejecting AI word!")
+                    return {"valid": False, "reason": f"Cụm từ '{ai_word}' không phải là cách nói tự nhiên có thật."}
             return data
         except Exception as e:
             logger.error(f"JSON parse error in validate_and_next_singleplayer: {e} | Raw content: {res}")
@@ -217,7 +228,7 @@ QUY TẮC BẮT BUỘC:
 1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT CÓ THẬT, THÔNG DỤNG trong từ điển và đời sống.
 2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (KHÔNG PHÂN BIỆT VIẾT HOA/THƯỜNG).
 3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
-4. Cụm từ phải có nghĩa thực tế trong tiếng Việt. TUYỆT ĐỐI KHÔNG chấp nhận cụm từ ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau', 'chơi gà',...).
+4. Chấp nhận các cách nói tự nhiên như 'đẹp quá', 'to lắm', 'vui vẻ'. TUYỆT ĐỐI KHÔNG chấp nhận cụm từ ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau', 'chơi gà',...).
 
 Trả về duy nhất định dạng JSON:
 {{
