@@ -446,8 +446,22 @@ async def debug_01001(interaction: discord.Interaction):
         lvl = random.choice(["ERROR", "CRITICAL", "FATAL", "EMERGENCY"])
         mod = random.choice(["discord.ext.commands", "aiohttp.client", "urllib3.connectionpool", "bot.core", "api.handler", "db.connector", "worker.main"])
         lines.append(f"[{ts}] [{lvl}] PID:{pid} | {mod} | [{cat}] {err}")
-    error_block = "\n".join(lines)
-    await interaction.response.send_message(f"```\n{error_block}\n```")
+    # Discord limit 2000 chars - split into multiple messages if needed
+    full_text = "\n".join(lines)
+    chunks = []
+    current = ""
+    for line in lines:
+        if len(current) + len(line) + 1 > 1900:
+            chunks.append(current)
+            current = line
+        else:
+            current = current + "\n" + line if current else line
+    if current:
+        chunks.append(current)
+    
+    await interaction.response.send_message(f"```\n{chunks[0]}\n```")
+    for chunk in chunks[1:]:
+        await interaction.followup.send(f"```\n{chunk}\n```")
 
 @bot.tree.command(name="info", description="Thông tin về bot")
 async def info_slash(interaction: discord.Interaction):
