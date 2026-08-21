@@ -11,6 +11,7 @@ from openai import AsyncOpenAI
 from discord.ui import View, Button
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import motor.motor_asyncio
 
 # Setup logging
 logging.basicConfig(
@@ -89,6 +90,31 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
+# ================= MongoDB Connection =================
+MONGODB_URI = os.getenv("MONGODB_URI")
+if not MONGODB_URI:
+    logger.error("MONGODB_URI is missing in environment variables!")
+    # Không exit ngay vì có thể chạy local không cần MongoDB? Nhưng vẫn log lỗi.
+    # Vẫn để bot chạy nhưng các lệnh custom role sẽ báo lỗi.
+
+db_client = None
+db = None
+
+async def init_mongodb():
+    global db_client, db
+    if not MONGODB_URI:
+        logger.error("Cannot initialize MongoDB: MONGODB_URI not set")
+        return False
+    try:
+        db_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URI)
+        db = db_client.get_database("discord_bot_data")
+        await db.command("ping")
+        logger.info("✅ Connected to MongoDB Atlas")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to MongoDB: {e}")
+        return False
+
 # Không cần on_interaction nữa, ta sẽ dùng middleware riêng cho slash commands
 # Thay vào đó, ta sẽ thêm check trong từng command hoặc dùng app_commands.default_permissions
 # Tuy nhiên, để tập trung, ta có thể override bot.tree.interaction_check
@@ -101,6 +127,11 @@ async def on_ready():
     logger.info("All commands are locked: require Manage Guild or Administrator permission.")
     logger.info(f"Target Channel ID: {ALLOWED_CHANNEL_ID}")
     logger.info(f"Xkiro Model: {XKIRO_MODEL}")
+    
+    # Initialize MongoDB
+    if await init_mongodb():
+        # Migrate data from JSON if needed
+        await migrate_json_to_mongodb()
     
     # Sync slash commands
     try:
@@ -354,52 +385,52 @@ def apply_wrapper(text: str, wrapper_value: str) -> str:
             return f"{w['prefix']}{text}{w['suffix']}"
     return text
 
-def load_custom_roles():
-    try:
-        with open(CUSTOM_ROLES_FILE, "r") as f:
-            data = json.load(f)
-        # Kiểm tra định dạng: nếu data không phải là dict, reset về {}
-        if not isinstance(data, dict):
-            logger.warning(f"Phát hiện data JSON sai định dạng (kiểu {type(data).__name__}), đang reset về {{}}")
-            data = {}
-            save_custom_roles(data)
-        return data
-    except FileNotFoundError:
+async def load_custom_roles():
+    if not db:
         return {}
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}, resetting file to {{}}")
-        data = {}
-        save_custom_roles(data)
-        return data
+    try:
+        doc = await db.custom_roles.find_one({"_id": "all"})
+        if doc and "data" in doc:
+            return doc["data"]
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading custom roles: {e}")
+        return {}
 
-def save_custom_roles(data):
-    with open(CUSTOM_ROLES_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+async def save_custom_roles(data):
+    if not db:
+        return
+    try:
+        await db.custom_roles.update_one(
+            {"_id": "all"},
+            {"$set": {"data": data}},
+            upsert=True
+        )
+    except Exception as e:
+        logger.error(f"Error saving custom roles: {e}")
 
-def add_custom_role(guild_id, role_id):
-    data = load_custom_roles()
+async def add_custom_role(guild_id, role_id):
+    data = await load_custom_roles()
     guild_str = str(guild_id)
     if guild_str not in data:
         data[guild_str] = []
     if role_id not in data[guild_str]:
         data[guild_str].append(role_id)
-        save_custom_roles(data)
+        await save_custom_roles(data)
 
-def remove_custom_role(guild_id, role_id):
-    data = load_custom_roles()
+async def remove_custom_role(guild_id, role_id):
+    data = await load_custom_roles()
     guild_str = str(guild_id)
     if guild_str in data and role_id in data[guild_str]:
         data[guild_str].remove(role_id)
-        save_custom_roles(data)
+        await save_custom_roles(data)
 
-def get_custom_role_count(guild_id):
-    data = load_custom_roles()
-    # Đảm bảo data là dict (load_custom_roles đã xử lý)
+async def get_custom_role_count(guild_id):
+    data = await load_custom_roles()
     return len(data.get(str(guild_id), []))
 
-def is_custom_role(guild_id, role_id):
-    data = load_custom_roles()
-    # Đảm bảo data là dict (load_custom_roles đã xử lý)
+async def is_custom_role(guild_id, role_id):
+    data = await load_custom_roles()
     return role_id in data.get(str(guild_id), [])
 
 async def get_color_info(hex_color):
@@ -719,7 +750,7 @@ class ConfirmView(View):
                 reason=f"Custom role created by {self.interaction.user} (ID: {self.interaction.user.id})"
             )
             # Thêm vào tracking JSON
-            add_custom_role(self.interaction.guild_id, role.id)
+            await add_custom_role(self.interaction.guild_id, role.id)
 
             # Gán cho target nếu có
             if self.target:
@@ -848,7 +879,7 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
                 return
 
     # Check custom role limit
-    count = get_custom_role_count(interaction.guild_id)
+    count = await get_custom_role_count(interaction.guild_id)
     if count >= MAX_CUSTOM_ROLES:
         await interaction.response.send_message(f"❌ Server đã đạt giới hạn {MAX_CUSTOM_ROLES} custom role.", ephemeral=True)
         return
@@ -880,7 +911,7 @@ async def customrole_remove(interaction: discord.Interaction, role: discord.Role
         return
 
     # Check if role is custom
-    if not is_custom_role(interaction.guild_id, role.id):
+    if not await is_custom_role(interaction.guild_id, role.id):
         await interaction.response.send_message("❌ Role này không phải do bot tạo nên không thể xóa.", ephemeral=True)
         return
 
@@ -911,7 +942,7 @@ async def customrole_remove(interaction: discord.Interaction, role: discord.Role
         await button_interaction.response.defer(ephemeral=True)
         try:
             await role.delete(reason=f"Deleted by {interaction.user}")
-            remove_custom_role(interaction.guild_id, role.id)
+            await remove_custom_role(interaction.guild_id, role.id)
             await button_interaction.followup.send(f"✅ Đã xóa role **{role.name}**.", ephemeral=True)
         except discord.Forbidden:
             await button_interaction.followup.send("❌ Bot không có quyền xóa role.", ephemeral=True)
@@ -941,20 +972,75 @@ async def customrole_remove(interaction: discord.Interaction, role: discord.Role
 # Add the group to the tree
 bot.tree.add_command(customrole_group)
 
+# ================= Migration from JSON to MongoDB =================
+async def migrate_json_to_mongodb():
+    """Migrate data from JSON files to MongoDB if they exist and MongoDB is empty."""
+    if not db:
+        return
+    # Check if we already have data in MongoDB
+    existing = await db.custom_roles.find_one({"_id": "all"})
+    if existing:
+        logger.info("MongoDB already has custom roles data, skipping migration.")
+    else:
+        # Try to load from JSON
+        try:
+            with open(CUSTOM_ROLES_FILE, "r") as f:
+                data = json.load(f)
+            if data and isinstance(data, dict):
+                await save_custom_roles(data)
+                logger.info(f"✅ Migrated custom roles from JSON to MongoDB ({len(data)} guilds)")
+            else:
+                logger.info("No valid data in JSON file, skipping migration.")
+        except FileNotFoundError:
+            logger.info("No JSON file found, skipping migration.")
+        except Exception as e:
+            logger.error(f"Error migrating custom roles: {e}")
+
+    # Panels migration
+    existing_panels = await db.panels.find_one({"_id": "all"})
+    if existing_panels:
+        logger.info("MongoDB already has panels data, skipping migration.")
+    else:
+        try:
+            with open(PANELS_FILE, "r") as f:
+                data = json.load(f)
+            if data and isinstance(data, dict):
+                await save_panels(data)
+                logger.info(f"✅ Migrated panels from JSON to MongoDB ({len(data)} guilds)")
+            else:
+                logger.info("No valid panels data in JSON file, skipping migration.")
+        except FileNotFoundError:
+            logger.info("No panels JSON file found, skipping migration.")
+        except Exception as e:
+            logger.error(f"Error migrating panels: {e}")
+
 # ================= Role Selection Panel (Lệnh /by) =================
 
 PANELS_FILE = "panels.json"
 
-def load_panels():
+async def load_panels():
+    if not db:
+        return {}
     try:
-        with open(PANELS_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
+        doc = await db.panels.find_one({"_id": "all"})
+        if doc and "data" in doc:
+            return doc["data"]
+        return {}
+    except Exception as e:
+        logger.error(f"Error loading panels: {e}")
         return {}
 
-def save_panels(data):
-    with open(PANELS_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+async def save_panels(data):
+    if not db:
+        return
+    try:
+        await db.panels.update_one(
+            {"_id": "all"},
+            {"$set": {"data": data}},
+            upsert=True
+        )
+    except Exception as e:
+        logger.error(f"Error saving panels: {e}")
 
 class RoleSelectDropdown(discord.ui.Select):
     def __init__(self, guild_id: int, role_ids: list[int]):
@@ -1124,13 +1210,13 @@ async def by_command(
 
 # Hàm đăng ký lại các persistent view khi bot khởi động
 async def register_persistent_views():
-    panels = load_panels()
+    panels = await load_panels()
     for guild_id_str, guild_panels in panels.items():
         guild_id = int(guild_id_str)
         guild = bot.get_guild(guild_id)
         if not guild:
             continue
-        data = load_custom_roles()
+        data = await load_custom_roles()
         role_ids = data.get(guild_id_str, [])
         if not role_ids:
             continue
@@ -1148,7 +1234,7 @@ async def register_persistent_views():
             except discord.NotFound:
                 # Message đã bị xóa, xóa metadata
                 del guild_panels[message_id_str]
-                save_panels(panels)
+                await save_panels(panels)
                 logger.warning(f"Xóa panel không còn tồn tại: {message_id}")
             except Exception as e:
                 logger.error(f"Lỗi khi đăng ký persistent view cho message {message_id}: {e}")
