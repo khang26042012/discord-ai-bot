@@ -108,6 +108,12 @@ async def on_ready():
         logger.info(f"Synced {len(synced)} slash command(s).")
     except Exception as e:
         logger.error(f"Failed to sync slash commands: {e}")
+    
+    # Đăng ký lại các persistent view cho panel /by
+    try:
+        await register_persistent_views()
+    except Exception as e:
+        logger.error(f"Failed to register persistent views: {e}")
         
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="tin nhắn AI"))
 
@@ -934,6 +940,222 @@ async def customrole_remove(interaction: discord.Interaction, role: discord.Role
 
 # Add the group to the tree
 bot.tree.add_command(customrole_group)
+
+# ================= Role Selection Panel (Lệnh /by) =================
+
+PANELS_FILE = "panels.json"
+
+def load_panels():
+    try:
+        with open(PANELS_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_panels(data):
+    with open(PANELS_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+class RoleSelectDropdown(discord.ui.Select):
+    def __init__(self, guild_id: int, role_ids: list[int]):
+        self.guild_id = guild_id
+        self.role_ids = role_ids
+        options = []
+        guild = bot.get_guild(guild_id)
+        if guild:
+            for role_id in role_ids:
+                role = guild.get_role(role_id)
+                if role:
+                    options.append(
+                        discord.SelectOption(
+                            label=role.name[:100],
+                            value=str(role.id),
+                            default=False
+                        )
+                    )
+        placeholder = "Chọn role..." if options else "Chưa có custom role nào"
+        super().__init__(
+            placeholder=placeholder,
+            min_values=0,
+            max_values=len(options) if options else 1,
+            options=options,
+            custom_id=f"role_select_{guild_id}"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        if not interaction.guild:
+            return await interaction.response.send_message("Lỗi: không tìm thấy guild.", ephemeral=True)
+        
+        member = interaction.guild.get_member(interaction.user.id)
+        if not member:
+            return await interaction.response.send_message("Lỗi: không tìm thấy member.", ephemeral=True)
+        
+        selected_role_ids = [int(v) for v in self.values]
+        
+        # Lấy tất cả custom role trong server
+        custom_role_ids = set(self.role_ids)
+        
+        # Role hiện tại của member (chỉ các role thuộc panel)
+        current_role_ids = set()
+        for role in member.roles:
+            if role.id in custom_role_ids:
+                current_role_ids.add(role.id)
+        
+        # Xác định thêm và gỡ
+        to_add = set(selected_role_ids) - current_role_ids
+        to_remove = current_role_ids - set(selected_role_ids)
+        
+        added_names = []
+        removed_names = []
+        
+        # Thêm role
+        for role_id in to_add:
+            role = interaction.guild.get_role(role_id)
+            if role:
+                try:
+                    await member.add_roles(role, reason="Panel role selection")
+                    added_names.append(role.name)
+                except discord.Forbidden:
+                    pass
+                except discord.HTTPException:
+                    pass
+        
+        # Gỡ role
+        for role_id in to_remove:
+            role = interaction.guild.get_role(role_id)
+            if role:
+                try:
+                    await member.remove_roles(role, reason="Panel role deselection")
+                    removed_names.append(role.name)
+                except discord.Forbidden:
+                    pass
+                except discord.HTTPException:
+                    pass
+        
+        # Phản hồi
+        parts = []
+        if added_names:
+            parts.append(f"✅ Đã thêm: {', '.join(added_names)}")
+        if removed_names:
+            parts.append(f"❌ Đã gỡ: {', '.join(removed_names)}")
+        if not parts:
+            parts.append("ℹ️ Không có thay đổi nào.")
+        
+        await interaction.response.send_message("\n".join(parts), ephemeral=True)
+
+class RoleSelectView(discord.ui.View):
+    def __init__(self, guild_id: int, role_ids: list[int]):
+        super().__init__(timeout=None)
+        self.guild_id = guild_id
+        self.role_ids = role_ids
+        self.add_item(RoleSelectDropdown(guild_id, role_ids))
+
+# Lệnh /by
+@bot.tree.command(name="by", description="Tạo panel chọn role (yêu cầu quyền Manage Roles)")
+@discord.app_commands.default_permissions(manage_roles=True)
+@discord.app_commands.describe(
+    title="Tiêu đề panel",
+    description="Mô tả hướng dẫn",
+    channel="Kênh gửi panel (mặc định: kênh hiện tại)",
+    color="Mã màu hex cho embed (mặc định: #5865F2)"
+)
+@discord.app_commands.guild_only()
+async def by_command(
+    interaction: discord.Interaction,
+    title: str,
+    description: str,
+    channel: discord.TextChannel = None,
+    color: str = "#5865F2"
+):
+    # Kiểm tra quyền
+    if not await check_manager_interaction(interaction):
+        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server.", ephemeral=True)
+        return
+    
+    target_channel = channel or interaction.channel
+    if not target_channel:
+        await interaction.response.send_message("❌ Không tìm thấy kênh.", ephemeral=True)
+        return
+    
+    # Lấy danh sách custom role ID
+    data = load_custom_roles()
+    guild_str = str(interaction.guild_id)
+    role_ids = data.get(guild_str, [])
+    if not role_ids:
+        await interaction.response.send_message("❌ Server chưa có custom role nào. Hãy tạo role trước.", ephemeral=True)
+        return
+    
+    # Tạo embed
+    try:
+        embed_color = discord.Color.from_str(color)
+    except Exception:
+        embed_color = discord.Color.from_str("#5865F2")
+    
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=embed_color
+    )
+    embed.set_footer(text="Chọn role bên dưới. Bạn có thể chọn nhiều role cùng lúc.")
+    
+    view = RoleSelectView(interaction.guild_id, role_ids)
+    
+    # Gửi message
+    await interaction.response.send_message("⏳ Đang gửi panel...", ephemeral=True)
+    message = await target_channel.send(embed=embed, view=view)
+    
+    # Lưu panel metadata
+    panels = load_panels()
+    guild_panels = panels.setdefault(str(interaction.guild_id), {})
+    guild_panels[str(message.id)] = {
+        "channel_id": target_channel.id,
+        "title": title,
+        "description": description,
+        "color": color
+    }
+    save_panels(panels)
+    
+    # Đăng ký view persistent
+    bot.add_view(view, message_id=message.id)
+    
+    await interaction.edit_original_response(
+        content=f"✅ Panel đã được gửi vào {target_channel.mention}!"
+    )
+
+# Hàm đăng ký lại các persistent view khi bot khởi động
+async def register_persistent_views():
+    panels = load_panels()
+    for guild_id_str, guild_panels in panels.items():
+        guild_id = int(guild_id_str)
+        guild = bot.get_guild(guild_id)
+        if not guild:
+            continue
+        data = load_custom_roles()
+        role_ids = data.get(guild_id_str, [])
+        if not role_ids:
+            continue
+        for message_id_str, info in guild_panels.items():
+            message_id = int(message_id_str)
+            channel = guild.get_channel(info["channel_id"])
+            if not channel:
+                continue
+            try:
+                # Thử lấy message để đảm bảo nó tồn tại
+                await channel.fetch_message(message_id)
+                view = RoleSelectView(guild_id, role_ids)
+                bot.add_view(view, message_id=message_id)
+                logger.info(f"Đã đăng ký lại persistent view cho message {message_id}")
+            except discord.NotFound:
+                # Message đã bị xóa, xóa metadata
+                del guild_panels[message_id_str]
+                save_panels(panels)
+                logger.warning(f"Xóa panel không còn tồn tại: {message_id}")
+            except Exception as e:
+                logger.error(f"Lỗi khi đăng ký persistent view cho message {message_id}: {e}")
+
+# Gọi register_persistent_views trong on_ready
+# Cập nhật hàm on_ready để gọi register_persistent_views sau khi sync
+# Chúng ta sẽ patch on_ready bằng cách thêm vào cuối hàm hiện tại
 
 if __name__ == "__main__":
     bot.run(TOKEN)
