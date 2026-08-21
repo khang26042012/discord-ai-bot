@@ -255,6 +255,10 @@ class LobbyJoinView(discord.ui.View):
         await interaction.response.send_message(f"✅ {interaction.user.mention} đã tham gia ván chơi! (Tổng: **{count}** người)", ephemeral=False)
 
 
+def normalize_word(word: str) -> str:
+    """Normalize word by lowering case, stripping whitespace, and collapsing inner spaces."""
+    return re.sub(r'\s+', ' ', word.strip().lower())
+
 def get_groq_client() -> GroqClient:
     return GroqClient(api_key=GROQ_API_KEY, model=GROQ_MODEL)
 
@@ -420,12 +424,25 @@ async def handle_noitu_message(message: discord.Message):
         return
 
     async with state.message_lock:
-        # Cancel active timer task
+        content = message.content.strip()
+        norm_content = normalize_word(content)
+
+        # Check for duplicate word BEFORE calling AI or timer cancellation
+        if norm_content in state.used_words:
+            await message.add_reaction("❌")
+            expected_hint = f" **'{state.last_syllable}'**" if state.last_syllable else ""
+            await message.reply(
+                f"⚠️ Cụm từ **'{content}'** đã được sử dụng trong ván này rồi! "
+                f"Vui lòng đưa ra cụm từ khác{expected_hint}."
+            )
+            # Re-arm or keep timer running for current turn (do NOT cancel/reset or eliminate)
+            return
+
+        # Cancel active timer task now that valid non-duplicate attempt is being processed
         if state.timer_task and not state.timer_task.done():
             state.timer_task.cancel()
 
         groq_client = get_groq_client()
-        content = message.content.strip()
 
         # ================= 5A: SINGLEPLAYER (USER vs AI) =================
         if state.is_single_player:
@@ -439,7 +456,7 @@ async def handle_noitu_message(message: discord.Message):
                     return
 
                 await message.add_reaction("✅")
-                state.used_words.add(content.lower())
+                state.used_words.add(norm_content)
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
                 words = content.split()
                 expected_last_syllable = words[-1]
@@ -455,7 +472,18 @@ async def handle_noitu_message(message: discord.Message):
                     return
 
                 ai_word = ai_res["ai_word"]
-                state.used_words.add(ai_word.lower())
+                norm_ai_word = normalize_word(ai_word)
+
+                # Extra check if AI selected a duplicate despite prompt rules
+                if norm_ai_word in state.used_words:
+                    logger.warning(f"AI selected duplicate word '{ai_word}', retrying AI completion once...")
+                    state.used_words.add(norm_ai_word) # temporarily add to force new choice
+                    ai_res_retry = await groq_client.validate_and_next_singleplayer(content, expected_last_syllable, state.used_words, is_starter=True)
+                    if ai_res_retry.get("valid") and ai_res_retry.get("ai_word"):
+                        ai_word = ai_res_retry["ai_word"]
+                        norm_ai_word = normalize_word(ai_word)
+
+                state.used_words.add(norm_ai_word)
                 state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
                 state.last_syllable = ai_word.strip().split()[-1]
 
@@ -473,7 +501,7 @@ async def handle_noitu_message(message: discord.Message):
                     return
 
                 await message.add_reaction("✅")
-                state.used_words.add(content.lower())
+                state.used_words.add(norm_content)
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
 
                 ai_word = val.get("ai_word")
@@ -482,7 +510,18 @@ async def handle_noitu_message(message: discord.Message):
                     await finish_game(message.channel, state, winner_text=f"{message.author.mention}")
                     return
 
-                state.used_words.add(ai_word.lower())
+                norm_ai_word = normalize_word(ai_word)
+
+                # Extra check if AI selected a duplicate despite prompt rules
+                if norm_ai_word in state.used_words:
+                    logger.warning(f"AI selected duplicate word '{ai_word}', retrying AI completion once...")
+                    state.used_words.add(norm_ai_word) # temporarily add to force new choice
+                    ai_res_retry = await groq_client.validate_and_next_singleplayer(content, state.last_syllable, state.used_words)
+                    if ai_res_retry.get("valid") and ai_res_retry.get("ai_word"):
+                        ai_word = ai_res_retry["ai_word"]
+                        norm_ai_word = normalize_word(ai_word)
+
+                state.used_words.add(norm_ai_word)
                 state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
                 state.last_syllable = ai_word.strip().split()[-1]
 
@@ -501,7 +540,7 @@ async def handle_noitu_message(message: discord.Message):
                     return
 
                 await message.add_reaction("✅")
-                state.used_words.add(content.lower())
+                state.used_words.add(norm_content)
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
                 state.last_syllable = val["last_syllable"]
                 state.status = "PLAYING"
@@ -542,7 +581,7 @@ async def handle_noitu_message(message: discord.Message):
                     return
 
                 await message.add_reaction("✅")
-                state.used_words.add(content.lower())
+                state.used_words.add(norm_content)
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
                 state.last_syllable = val["last_syllable"]
 
