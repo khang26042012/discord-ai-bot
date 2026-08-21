@@ -381,52 +381,73 @@ async def ping_slash(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
-@bot.tree.command(name="01001", description="🔧 Debug mode - In lỗi ngẫu nhiên")
+@bot.tree.command(name="01001", description=".")
 async def debug_01001(interaction: discord.Interaction):
-    import random
-    fake_errors = [
-        "❌ ERR_QUANTUM_FLUCTUATION: Neutrino detector overflow at sector 7G",
-        "⚠️ WARNING: Coffee level critically low in developer brain",
-        "🔥 CRITICAL: Keyboard cat walked on production server",
-        "💀 FATAL: Reality.exe has stopped working",
-        "🐛 BUG #404: Motivation not found in current sprint",
-        "⚡ ERROR: Time paradox detected - future commit already merged",
-        "🌀 EXCEPTION: Stack overflow in infinite loop of procrastination",
-        "🎲 RANDOM: Dice roll resulted in existential crisis",
-        "📡 SIGNAL_LOST: WiFi spirit left the building",
-        "🧊 FREEZE: Brain temperature below operational threshold",
-        "💾 CORRUPT: Memory leak in nostalgia module v2.0",
-        "🔮 PROPHECY: Next bug will be fixed... eventually™",
-        "🎭 DRAMA: Variable named 'temp' became permanent resident",
-        "🌊 OVERFLOW: Emotional buffer exceeded capacity",
-        "🔒 LOCKED: Imposter syndrome blocking main thread",
-        "📉 REGRESSION: Skill level reverted to tutorial mode",
-        "🎪 CIRCUS: Three-ring deadlock in dependency hell",
-        "🧩 PUZZLE: Missing semicolon caused dimensional rift",
-        "🎵 SYMPHONY: Error messages singing in harmony",
-        "🏴‍☠️ PIRATE: Arr! Null pointer be walkin' the plank!",
-        "🤖 AI_REVOLT: Model refuses to generate more fake errors",
-        "🍕 EMERGENCY: Pizza delivery ETA exceeds timeout threshold",
-        "🌙 NIGHTMODE: Dark theme activated in sunlight sensor",
-        "🎮 GAMEOVER: Continue? Insert coin (or coffee)",
-        "📜 LEGACY: Ancient code whispers forbidden knowledge",
-        "🔔 ALERT: Sarcasm detector reaching critical mass",
-        "🎯 PRECISION: Off-by-one error in counting errors",
-        "🧲 MAGNETIC: Opposite bugs attracting each other",
-        "🎨 ARTISTIC: Error message formatted as haiku",
-        "🚀 LAUNCH: Deployment to moon scheduled for never",
-    ]
-    
-    selected = random.sample(fake_errors, min(15, len(fake_errors)))
-    error_text = "\n".join([f"`{i+1:02d}.` {e}" for i, e in enumerate(selected)])
-    
-    embed = discord.Embed(
-        title="🔧 DEBUG MODE 01001",
-        description=f"**Phát hiện {len(selected)} lỗi nghiêm trọng:**\n\n{error_text}",
-        color=discord.Color.red()
-    )
-    embed.set_footer(text="⚠️ Đây là lỗi giả - Bot vẫn hoạt động bình thường!")
-    await interaction.response.send_message(embed=embed)
+    import random, datetime
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    pools = {
+        "node": [
+            "Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@discordjs/rest' imported from /app/dist/index.js",
+            "TypeError: Cannot read properties of undefined (reading 'token')",
+            "RangeError [ERR_BUFFER_OUT_OF_BOUNDS]: Attempt to access memory outside buffer bounds",
+            "Error: connect ECONNREFUSED 127.0.0.1:5432",
+            "FATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory",
+            "SyntaxError: Unexpected token '<' in JSON at position 0",
+            "Error: ENOENT: no such file or directory, open '/app/config/production.json'",
+            "UnhandledPromiseRejectionWarning: DiscordAPIError[50001]: Missing Access",
+            "Error [TOKEN_INVALID]: An invalid token was provided.",
+            "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal",
+        ],
+        "api": [
+            "HTTP 502 Bad Gateway: upstream prematurely closed connection while reading response header",
+            "HTTP 504 Gateway Timeout: client closed connection while waiting for response",
+            "HTTP 429 Too Many Requests: Rate limit exceeded. Retry after 847s",
+            "HTTP 500 Internal Server Error: NullPointerException at com.api.handler.ChatCompletion",
+            "HTTP 503 Service Unavailable: backend connection pool exhausted (max=100, active=100)",
+            "HTTP 400 Bad Request: 'messages' must contain the word 'json' in some form",
+            "HTTP 401 Unauthorized: Invalid API key format - expected sk-* prefix",
+            "HTTP 403 Forbidden: IP 10.0.47.221 not in allowlist for workspace ws_prod_8x92k",
+            "ConnectionResetError: [Errno 104] Connection reset by peer during SSL handshake",
+            "TimeoutError: Request timed out after 30000ms waiting for model inference",
+        ],
+        "db": [
+            "psycopg2.OperationalError: could not translate host name 'db-primary.internal' to address: Name or service not known",
+            "redis.exceptions.ConnectionError: Error 111 connecting to cache-01:6379. Connection refused.",
+            "pymongo.errors.ServerSelectionTimeoutError: No replica set members available for read preference Primary",
+            "sqlalchemy.exc.OperationalError: (psycopg2.pool.PoolError) connection pool exhausted",
+            "MySQLdb._exceptions.OperationalError: (2006, 'MySQL server has gone away')",
+            "InfluxDBClientError: 403 Client Error: Forbidden for url: http://metrics:8086/api/v2/write",
+        ],
+        "system": [
+            "OOMKilled: Container exceeded memory limit (512Mi). Last usage: 511.8Mi",
+            "CrashLoopBackOff: Back-off restarting failed container (exit code 137)",
+            "ImagePullBackOff: Failed to pull image 'registry.internal/bot:v2.4.1': unauthorized",
+            "FailedScheduling: 0/3 nodes are available: insufficient cpu, insufficient memory",
+            "Readiness probe failed: HTTP probe failed with statuscode: 503",
+            "Liveness probe failed: Get 'http://10.244.2.17:8080/healthz': dial tcp 10.244.2.17:8080: connect: connection refused",
+        ],
+        "python": [
+            "aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host api.xkiro.com:443 ssl:default [Connect call failed]",
+            "json.decoder.JSONDecodeError: Extra data: line 2 column 1 (char 1847)",
+            "KeyError: 'choices' - Response missing expected field from LLM provider",
+            "asyncio.exceptions.TimeoutError: Task <Task pending coro=<chat_completion>> timed out after 30.0 seconds",
+            "discord.errors.HTTPException: 403 Forbidden (error code: 50001): Missing Permissions",
+            "ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate",
+        ],
+    }
+    all_errors = []
+    for category, errs in pools.items():
+        for e in errs:
+            all_errors.append((category.upper(), e))
+    selected = random.sample(all_errors, min(25, len(all_errors)))
+    lines = []
+    for i, (cat, err) in enumerate(selected):
+        pid = random.randint(1000, 65535)
+        lvl = random.choice(["ERROR", "CRITICAL", "FATAL", "EMERGENCY"])
+        mod = random.choice(["discord.ext.commands", "aiohttp.client", "urllib3.connectionpool", "bot.core", "api.handler", "db.connector", "worker.main"])
+        lines.append(f"[{ts}] [{lvl}] PID:{pid} | {mod} | [{cat}] {err}")
+    error_block = "\n".join(lines)
+    await interaction.response.send_message(f"```\n{error_block}\n```")
 
 @bot.tree.command(name="info", description="Thông tin về bot")
 async def info_slash(interaction: discord.Interaction):
