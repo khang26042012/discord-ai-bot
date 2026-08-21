@@ -616,14 +616,14 @@ def has_vietnamese_diacritics(text: str) -> bool:
 
 # Các mẫu trang trí viền cho tên có dấu
 DECORATIVE_WRAPPERS = [
-    {"label": "♡ ... ♡", "prefix": "♡ ", "suffix": " ♡"},
-    {"label": "꒰ঌ ... ໒꒱", "prefix": "꒰ঌ ", "suffix": " ໒꒱"},
-    {"label": "⋆˚꩜｡ ...", "prefix": "⋆˚꩜｡ ", "suffix": ""},
-    {"label": "🌿 ...", "prefix": "🌿 ", "suffix": ""},
-    {"label": "༄ ... ༄", "prefix": "༄ ", "suffix": " ༄"},
-    {"label": "★ ... ★", "prefix": "★ ", "suffix": " ★"},
-    {"label": "【 ... 】", "prefix": "【", "suffix": "】"},
-    {"label": "┊ ... ┊", "prefix": "┊", "suffix": "┊"},
+    {"label": "♡ ... ♡", "value": "heart", "prefix": "♡ ", "suffix": " ♡"},
+    {"label": "꒰ঌ ... ໒꒱", "value": "wings", "prefix": "꒰ঌ ", "suffix": " ໒꒱"},
+    {"label": "⋆˚꩜｡ ...", "value": "galaxy", "prefix": "⋆˚꩜｡ ", "suffix": ""},
+    {"label": "🌿 ...", "value": "sprout", "prefix": "🌿 ", "suffix": ""},
+    {"label": "༄ ... ༄", "value": "wind", "prefix": "༄ ", "suffix": " ༄"},
+    {"label": "★ ... ★", "value": "star", "prefix": "★ ", "suffix": " ★"},
+    {"label": "【 ... 】", "value": "bracket", "prefix": "【", "suffix": "】"},
+    {"label": "┊ ... ┊", "value": "border", "prefix": "┊", "suffix": "┊"},
 ]
 
 def apply_decorative_wrapper(text: str, wrapper_index: int) -> str:
@@ -632,6 +632,20 @@ def apply_decorative_wrapper(text: str, wrapper_index: int) -> str:
         return text
     wrapper = DECORATIVE_WRAPPERS[wrapper_index]
     return wrapper["prefix"] + text + wrapper["suffix"]
+
+def apply_wrapper(text: str, wrapper_value: str) -> str:
+    """Áp dụng wrapper theo value (tên định danh)."""
+    for w in DECORATIVE_WRAPPERS:
+        if w.get("value") == wrapper_value:
+            return w["prefix"] + text + w["suffix"]
+    return text  # fallback: giữ nguyên nếu không tìm thấy
+
+def apply_wrapper(text: str, wrapper_value: str) -> str:
+    """Áp dụng wrapper theo value (tên định danh)."""
+    for w in DECORATIVE_WRAPPERS:
+        if w["value"] == wrapper_value:
+            return w["prefix"] + text + w["suffix"]
+    return text  # fallback: giữ nguyên nếu không tìm thấy
 
 def apply_style(text, style):
     if style == "Normal" or style not in STYLE_MAPS:
@@ -647,7 +661,9 @@ class StyleSelect(discord.ui.Select):
         if is_vn:
             # Tên có dấu tiếng Việt -> Chỉ dùng trang trí viền (Border Wrappers)
             placeholder = "Chọn mẫu trang trí viền (Tên có dấu)..."
-            for w in DECORATIVE_WRAPPERS:
+            # Lọc bỏ entry "none" (chỉ dùng khi có dấu)
+            wrapper_list = [w for w in DECORATIVE_WRAPPERS if w.get("value") != "none"]
+            for w in wrapper_list:
                 options.append(discord.SelectOption(
                     label=w["label"],
                     value=w["value"],
@@ -676,7 +692,7 @@ class StyleSelect(discord.ui.Select):
 
         if self.is_vn:
             self.view.styled_name = apply_wrapper(self.view.raw_name, selected)
-            style_label = next((w["label"] for w in DECORATIVE_WRAPPERS if w["value"] == selected), selected)
+            style_label = next((w["label"] for w in DECORATIVE_WRAPPERS if w.get("value") == selected), selected)
         else:
             self.view.styled_name = apply_style(self.view.raw_name, selected)
             style_label = selected
@@ -819,7 +835,7 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
 
     if is_vn:
         # Nếu tên CÓ DẤU -> chỉ áp dụng viền (wrapper), không biến đổi font chữ
-        current_style = style if any(w["value"] == style for w in DECORATIVE_WRAPPERS) else "none"
+        current_style = style if style in [w["value"] for w in DECORATIVE_WRAPPERS] else "none"
         styled_name = apply_wrapper(name, current_style)
     else:
         # Nếu tên KHÔNG DẤU -> áp dụng Font Style Unicode
