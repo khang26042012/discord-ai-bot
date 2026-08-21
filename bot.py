@@ -5,6 +5,7 @@ import re
 import json
 import aiohttp
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
@@ -250,7 +251,7 @@ async def on_message(message: discord.Message):
 
 # ================= Slash Commands =================
 
-noitu_group = app_commands.Group(name="noitu", description="Các lệnh trò chơi Nối Từ")
+noitu_group = discord.app_commands.Group(name="noitu", description="Các lệnh trò chơi Nối Từ")
 
 @noitu_group.command(name="start", description="Bắt đầu ván chơi Nối Từ Tiếng Việt")
 async def noitu_start_slash(interaction: discord.Interaction):
