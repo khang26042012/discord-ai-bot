@@ -12,22 +12,24 @@ from typing import Dict, List, Optional, Set, Any
 
 logger = logging.getLogger("NoiTuGame")
 
-# Environment variables
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+# Environment variables - Compatible with both Groq and 9router
+# Set these env vars: NINEROUTER_API_KEY, AI_BASE_URL, AI_MODEL
+AI_MODEL = os.getenv("AI_MODEL", os.getenv("AI_MODEL", "openai/gpt-oss-120b"))
+AI_API_KEY = os.getenv("NINEROUTER_API_KEY", os.getenv("AI_API_KEY", ""))
+AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.groq.com/openai/v1/chat/completions")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
 NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else None
 
-class GroqClient:
-    """Async Groq API helper using aiohttp."""
+class AIClient:
+    """Async AI API helper using aiohttp. Supports Groq, 9router, and OpenAI-compatible APIs."""
     def __init__(self, api_key: str, model: str):
         self.api_key = api_key
         self.model = model
-        self.base_url = "https://api.groq.com/openai/v1/chat/completions"
+        self.base_url = AI_BASE_URL
 
     async def chat_completion(self, messages: List[Dict[str, str]], json_mode: bool = True, retries: int = 1) -> Optional[str]:
         if not self.api_key:
-            logger.error("GROQ_API_KEY is not configured.")
+            logger.error("AI_API_KEY is not configured.")
             return None
 
         headers = {
@@ -326,8 +328,8 @@ def clean_syllable(text: str) -> str:
     cleaned = re.sub(r'^[^\w\s]+|[^\w\s]+$', '', text.strip(), flags=re.UNICODE)
     return cleaned.lower()
 
-def get_groq_client() -> GroqClient:
-    return GroqClient(api_key=GROQ_API_KEY, model=GROQ_MODEL)
+def get_groq_client() -> AIClient:
+    return AIClient(api_key=AI_API_KEY, model=AI_MODEL)
 
 
 async def start_noitu_game(interaction: discord.Interaction):
@@ -561,7 +563,10 @@ async def handle_noitu_message(message: discord.Message):
 
             elif state.status == "PLAYING":
                 # Validate player response phrase
-                val = await groq_client.validate_and_next_singleplayer(content, state.last_syllable, state.used_words)
+                # Extract player's last syllable for AI to connect next
+                player_words_clean = [clean_syllable(w) for w in content.strip().split() if clean_syllable(w)]
+                player_last_syllable = player_words_clean[-1] if len(player_words_clean) >= 2 else state.last_syllable
+                val = await groq_client.validate_and_next_singleplayer(content, player_last_syllable, state.used_words)
                 if not val["valid"]:
                     await message.add_reaction("❌")
                     await message.reply(f"❌ {message.author.mention} Vui lòng gửi lại từ nối khác! Lý do: {val['reason']}")
