@@ -64,7 +64,15 @@ class AIClient:
                                 continue
                             return None
 
-                        res_json = json.loads(raw_text)
+                        # Handle SSE streaming response from 9router
+                        clean_text = raw_text.strip()
+                        if clean_text.startswith('data:'):
+                            for line in clean_text.split('\n'):
+                                line = line.strip()
+                                if line.startswith('data:') and '[DONE]' not in line:
+                                    clean_text = line[5:].strip()
+                                    break
+                        res_json = json.loads(clean_text)
                         content = res_json["choices"][0]["message"]["content"]
                         # Clean markdown
                         content = re.sub(r"^```json\s*", "", content, flags=re.MULTILINE)
