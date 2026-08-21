@@ -407,7 +407,7 @@ async def debug_01001(interaction: discord.Interaction):
         "Readiness probe failed: HTTP probe failed with statuscode: 503",
         "ImagePullBackOff: Failed to pull image 'registry.internal/bot:v2.4.1'",
     ]
-    selected = random.sample(errors, min(12, len(errors)))
+    selected = random.sample(errors, min(20, len(errors)))
     lines = []
     for err in selected:
         pid = random.randint(1000, 65535)
@@ -415,11 +415,10 @@ async def debug_01001(interaction: discord.Interaction):
         mod = random.choice(["discord.ext.commands", "aiohttp.client", "bot.core", "api.handler", "db.connector"])
         lines.append(f"[{ts}] [{lvl}] PID:{pid} | {mod} | {err}")
     error_text = "\n".join(lines)
-    # Truncate to ~1000 chars if needed
-    if len(error_text) > 1000:
-        error_text = error_text[:997] + "..."
+    # Max 1950 chars to fit in embed description with code block wrapper
+    if len(error_text) > 1950:
+        error_text = error_text[:1947] + "..."
     embed = discord.Embed(
-        title="SYSTEM FAILURE",
         description=f"```diff\n- {error_text}\n```",
         color=discord.Color.red()
     )
