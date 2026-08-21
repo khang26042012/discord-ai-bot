@@ -381,6 +381,53 @@ async def ping_slash(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name="01001", description="🔧 Debug mode - In lỗi ngẫu nhiên")
+async def debug_01001(interaction: discord.Interaction):
+    import random
+    fake_errors = [
+        "❌ ERR_QUANTUM_FLUCTUATION: Neutrino detector overflow at sector 7G",
+        "⚠️ WARNING: Coffee level critically low in developer brain",
+        "🔥 CRITICAL: Keyboard cat walked on production server",
+        "💀 FATAL: Reality.exe has stopped working",
+        "🐛 BUG #404: Motivation not found in current sprint",
+        "⚡ ERROR: Time paradox detected - future commit already merged",
+        "🌀 EXCEPTION: Stack overflow in infinite loop of procrastination",
+        "🎲 RANDOM: Dice roll resulted in existential crisis",
+        "📡 SIGNAL_LOST: WiFi spirit left the building",
+        "🧊 FREEZE: Brain temperature below operational threshold",
+        "💾 CORRUPT: Memory leak in nostalgia module v2.0",
+        "🔮 PROPHECY: Next bug will be fixed... eventually™",
+        "🎭 DRAMA: Variable named 'temp' became permanent resident",
+        "🌊 OVERFLOW: Emotional buffer exceeded capacity",
+        "🔒 LOCKED: Imposter syndrome blocking main thread",
+        "📉 REGRESSION: Skill level reverted to tutorial mode",
+        "🎪 CIRCUS: Three-ring deadlock in dependency hell",
+        "🧩 PUZZLE: Missing semicolon caused dimensional rift",
+        "🎵 SYMPHONY: Error messages singing in harmony",
+        "🏴‍☠️ PIRATE: Arr! Null pointer be walkin' the plank!",
+        "🤖 AI_REVOLT: Model refuses to generate more fake errors",
+        "🍕 EMERGENCY: Pizza delivery ETA exceeds timeout threshold",
+        "🌙 NIGHTMODE: Dark theme activated in sunlight sensor",
+        "🎮 GAMEOVER: Continue? Insert coin (or coffee)",
+        "📜 LEGACY: Ancient code whispers forbidden knowledge",
+        "🔔 ALERT: Sarcasm detector reaching critical mass",
+        "🎯 PRECISION: Off-by-one error in counting errors",
+        "🧲 MAGNETIC: Opposite bugs attracting each other",
+        "🎨 ARTISTIC: Error message formatted as haiku",
+        "🚀 LAUNCH: Deployment to moon scheduled for never",
+    ]
+    
+    selected = random.sample(fake_errors, min(15, len(fake_errors)))
+    error_text = "\n".join([f"`{i+1:02d}.` {e}" for i, e in enumerate(selected)])
+    
+    embed = discord.Embed(
+        title="🔧 DEBUG MODE 01001",
+        description=f"**Phát hiện {len(selected)} lỗi nghiêm trọng:**\n\n{error_text}",
+        color=discord.Color.red()
+    )
+    embed.set_footer(text="⚠️ Đây là lỗi giả - Bot vẫn hoạt động bình thường!")
+    await interaction.response.send_message(embed=embed)
+
 @bot.tree.command(name="info", description="Thông tin về bot")
 async def info_slash(interaction: discord.Interaction):
     if not await check_manager_interaction(interaction):
