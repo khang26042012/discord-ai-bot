@@ -200,9 +200,10 @@ async def on_message(message: discord.Message):
    - TUYỆT ĐỐI KHÔNG tự bịa, đổi hoặc đưa sai Port (Ví dụ: KHÔNG ĐƯỢC đưa 19132 hay 25565). Port duy nhất đúng cho cả Java và Bedrock là `25655`.
    - TUYỆT ĐỐI KHÔNG tự bịa đặt tính năng, thông tin không có thật.
 
-2. **QUY TẮC ĐÍNH KÈM LINK DISCORD**:
-   - CHỈ đính kèm link Discord (`https://discord.gg/4afmVDmy2`) KHI VÀ CHỈ KHI người dùng hỏi về link Discord, nhóm cộng đồng, hoặc yêu cầu liên hệ/hỗ trợ từ Admin/Support.
-   - Khi câu hỏi chỉ xoay quanh cách chơi, lệnh, IP/Port, claim đất, shop,... TUYỆT ĐỐI KHÔNG gửi kèm link Discord ở cuối câu trả lời.
+2. **QUY TẮC CẤM GỬI LINK DISCORD (RẤT NGHIÊM NGẠC)**:
+   - **CẤM** tự động chèn link Discord (`https://discord.gg/4afmVDmy2`) vào bất kỳ câu trả lời nào.
+   - **CHỈ ĐƯỢC PHÉP** đính kèm link Discord KHI VÀ CHỈ KHI người dùng **HỎI THẲNG, TRỰC TIẾP, ĐÍCH DANH VỀ DISCORD** (Ví dụ: "cho xin link discord", "discord server là gì", "link group discord đâu").
+   - Đối với tất cả câu hỏi khác (IP, Port, cách đăng nhập, lệnh, claim đất, shop, nạp thẻ, luật server, hỗ trợ chung,...): **TUYỆT ĐỐI CẤM** xuất hiện link Discord hay từ Discord trong phản hồi.
 
 3. **CẤU TRÚC VÀ ĐỊNH DẠNG**:
    - Trình bày mạch lạc, rõ ràng bằng Tiếng Việt.
