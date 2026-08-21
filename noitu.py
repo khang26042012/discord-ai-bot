@@ -91,7 +91,7 @@ YÊU CẦU BẮT BUỘC:
             {"role": "user", "content": f"Kiểm tra cụm từ ra đề: '{phrase}'"}
         ]
         res = await self.chat_completion(messages, json_mode=True)
-        words = phrase.strip().split()
+        words = [clean_syllable(w) for w in phrase.strip().split() if clean_syllable(w)]
         if not res:
             if len(words) == 2:
                 return {"valid": True, "reason": "", "last_syllable": words[1]}
@@ -99,10 +99,12 @@ YÊU CẦU BẮT BUỘC:
 
         try:
             data = json.loads(res)
+            last_syl = data.get("last_syllable")
+            cleaned_last = clean_syllable(last_syl) if last_syl else (words[1] if len(words) == 2 else None)
             return {
                 "valid": bool(data.get("valid", False)),
                 "reason": str(data.get("reason", "Cụm từ không hợp lệ.")),
-                "last_syllable": data.get("last_syllable") or (words[1] if len(words) == 2 else None)
+                "last_syllable": cleaned_last
             }
         except Exception as e:
             logger.error(f"JSON parse error in validate_starter_phrase: {e}")
@@ -111,6 +113,7 @@ YÊU CẦU BẮT BUỘC:
     async def validate_and_next_singleplayer(self, current_word: str, expected_first_syllable: str, used_words: Set[str], is_starter: bool = False) -> Dict[str, Any]:
         """Validate player word and generate AI response for Singleplayer mode."""
         used_list_str = ", ".join(list(used_words))
+        clean_exp_first = clean_syllable(expected_first_syllable)
         
         if is_starter:
             # When current_word is starter phrase (e.g. "Trồng cây"), current_word IS valid already.
@@ -119,8 +122,8 @@ YÊU CẦU BẮT BUỘC:
 Người chơi vừa ra đề bằng cụm từ: '{current_word}'.
 Nhiệm vụ của bạn:
 1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG để nối tiếp.
-2. Cụm từ của bạn BẮT BUỘC phải bắt đầu bằng tiếng: '{expected_first_syllable}'.
-3. Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+2. Cụm từ của bạn BẮT BUỘC phải bắt đầu bằng tiếng: '{clean_exp_first}'.
+3. Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt viết hoa/thường): [{used_list_str}].
 4. Tránh từ Hán Việt quá hiếm. Chỉ kèm giải nghĩa ngắn trong ngoặc nếu dùng từ khó.
 
 Trả về duy nhất định dạng JSON:
@@ -132,14 +135,14 @@ Trả về duy nhất định dạng JSON:
 }}"""
             messages = [
                 {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": f"Ra đề: '{current_word}'. Bạn hãy nối tiếp từ bắt đầu bằng '{expected_first_syllable}'."}
+                {"role": "user", "content": f"Ra đề: '{current_word}'. Bạn hãy nối tiếp từ bắt đầu bằng '{clean_exp_first}'."}
             ]
         else:
             sys_prompt = f"""Bạn là trọng tài và đối thủ trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC CHO NGƯỜI CHƠI:
 1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT.
-2. Tiếng thứ nhất BẮT BUỘC phải khớp chính xác với: '{expected_first_syllable}'.
-3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (LƯU Ý: KHÔNG PHÂN BIỆT VIẾT HOA/VIẾT THƯỜNG. Ví dụ: 'Được', 'được', 'ĐƯỢC' đều là CÙNG 1 tiếng và HOÀN TOÀN HỢP LỆ).
+3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt hoa/thường): [{used_list_str}].
 4. Cụm từ phải có nghĩa thực tế trong tiếng Việt thông dụng.
 
 NẾU CỤM TỪ CỦA NGƯỜI CHƠI HỢP LỆ (valid=true):
@@ -173,11 +176,12 @@ Trả về duy nhất định dạng JSON:
     async def validate_multiplayer_word(self, current_word: str, expected_first_syllable: str, used_words: Set[str]) -> Dict[str, Any]:
         """Validate player word in Multiplayer mode."""
         used_list_str = ", ".join(list(used_words))
+        clean_exp_first = clean_syllable(expected_first_syllable)
         sys_prompt = f"""Bạn là trọng tài trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC:
 1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG.
-2. Tiếng thứ nhất BẮT BUỘC phải khớp chính xác với: '{expected_first_syllable}'.
-3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (LƯU Ý: KHÔNG PHÂN BIỆT VIẾT HOA/VIẾT THƯỜNG. Ví dụ: 'Được', 'được', 'ĐƯỢC' đều là CÙNG 1 tiếng và HOÀN TOÀN HỢP LỆ).
+3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt hoa/thường): [{used_list_str}].
 4. Cụm từ phải có nghĩa trong tiếng Việt.
 
 Trả về duy nhất định dạng JSON:
@@ -191,18 +195,20 @@ Trả về duy nhất định dạng JSON:
             {"role": "user", "content": f"Người chơi gửi: '{current_word}'"}
         ]
         res = await self.chat_completion(messages, json_mode=True)
-        words = current_word.strip().split()
+        words = [clean_syllable(w) for w in current_word.strip().split() if clean_syllable(w)]
         if not res:
-            if len(words) == 2 and words[0].lower() == expected_first_syllable.lower() and current_word.lower() not in [w.lower() for w in used_words]:
+            if len(words) == 2 and words[0] == clean_exp_first and normalize_word(current_word) not in used_words:
                 return {"valid": True, "reason": "", "last_syllable": words[1]}
             return {"valid": False, "reason": "Cụm từ không hợp lệ.", "last_syllable": None}
 
         try:
             data = json.loads(res)
+            last_syl = data.get("last_syllable")
+            cleaned_last = clean_syllable(last_syl) if last_syl else (words[1] if len(words) == 2 else None)
             return {
                 "valid": bool(data.get("valid", False)),
                 "reason": str(data.get("reason", "Cụm từ không hợp lệ.")),
-                "last_syllable": data.get("last_syllable") or (words[1] if len(words) == 2 else None)
+                "last_syllable": cleaned_last
             }
         except Exception as e:
             logger.error(f"JSON parse error in validate_multiplayer_word: {e}")
@@ -258,6 +264,13 @@ class LobbyJoinView(discord.ui.View):
 def normalize_word(word: str) -> str:
     """Normalize word by lowering case, stripping whitespace, and collapsing inner spaces."""
     return re.sub(r'\s+', ' ', word.strip().lower())
+
+def clean_syllable(text: str) -> str:
+    """Clean a syllable/word by stripping punctuation and whitespace, converting to lowercase."""
+    if not text:
+        return ""
+    cleaned = re.sub(r'^[^\w\s]+|[^\w\s]+$', '', text.strip(), flags=re.UNICODE)
+    return cleaned.lower()
 
 def get_groq_client() -> GroqClient:
     return GroqClient(api_key=GROQ_API_KEY, model=GROQ_MODEL)
@@ -458,8 +471,8 @@ async def handle_noitu_message(message: discord.Message):
                 await message.add_reaction("✅")
                 state.used_words.add(norm_content)
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
-                words = content.split()
-                expected_last_syllable = words[-1]
+                words = [clean_syllable(w) for w in content.split() if clean_syllable(w)]
+                expected_last_syllable = words[-1] if words else clean_syllable(val.get("last_syllable", ""))
                 state.status = "PLAYING"
 
                 # AI turn to respond to starter phrase: expected first syllable is the last word of starter phrase!
@@ -485,7 +498,8 @@ async def handle_noitu_message(message: discord.Message):
 
                 state.used_words.add(norm_ai_word)
                 state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
-                state.last_syllable = ai_word.strip().split()[-1]
+                ai_words = [clean_syllable(w) for w in ai_word.split() if clean_syllable(w)]
+                state.last_syllable = ai_words[-1] if ai_words else clean_syllable(ai_word)
 
                 await message.channel.send(f"🐭 **Chuột dethw:** `{ai_word}`")
                 await message.channel.send(f"👉 Tới lượt {message.author.mention}! Cần nối cụm từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
@@ -523,7 +537,8 @@ async def handle_noitu_message(message: discord.Message):
 
                 state.used_words.add(norm_ai_word)
                 state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
-                state.last_syllable = ai_word.strip().split()[-1]
+                ai_words = [clean_syllable(w) for w in ai_word.split() if clean_syllable(w)]
+                state.last_syllable = ai_words[-1] if ai_words else clean_syllable(ai_word)
 
                 await message.channel.send(f"🐭 **Chuột dethw:** `{ai_word}`")
                 await message.channel.send(f"👉 Tới lượt {message.author.mention}! Cần nối cụm từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
