@@ -319,6 +319,36 @@ CUSTOM_ROLES_FILE = "custom_roles.json"
 COLOR_API_BASE = "https://www.thecolorapi.com"
 _color_cache = {}
 
+# Regex phát hiện tiếng Việt có dấu
+VIETNAMESE_DIACRITICS_REGEX = re.compile(
+    r'[àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ'
+    r'ÀÁẢÃẠÂẦẤẨẪẬĂẰẮẲẴẶÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ]'
+)
+
+def has_vietnamese_diacritics(text: str) -> bool:
+    """Kiểm tra xem chuỗi có chứa ký tự tiếng Việt có dấu hay không."""
+    return bool(VIETNAMESE_DIACRITICS_REGEX.search(text))
+
+# Các mẫu trang trí viền dành cho tên CÓ dấu
+DECORATIVE_WRAPPERS = [
+    {"label": "Bình thường (Không viền)", "value": "none", "prefix": "", "suffix": ""},
+    {"label": "♡ ... ♡", "value": "heart", "prefix": "♡ ", "suffix": " ♡"},
+    {"label": "꒰ঌ ... ໒꒱", "value": "wings", "prefix": "꒰ঌ ", "suffix": " ໒꒱"},
+    {"label": "⋆˚꩜｡ ...", "value": "galaxy", "prefix": "⋆˚꩜｡ ", "suffix": ""},
+    {"label": "🌿 ...", "value": "sprout", "prefix": "🌿 ", "suffix": ""},
+    {"label": "༄ ... ༄", "value": "wind", "prefix": "༄ ", "suffix": " ༄"},
+    {"label": "★ ... ★", "value": "star", "prefix": "★ ", "suffix": " ★"},
+    {"label": "【 ... 】", "value": "bracket", "prefix": "【", "suffix": "】"},
+    {"label": "┊ ... ┊", "value": "border", "prefix": "┊", "suffix": "┊"},
+]
+
+def apply_wrapper(text: str, wrapper_value: str) -> str:
+    """Áp dụng viền trang trí cho tên role."""
+    for w in DECORATIVE_WRAPPERS:
+        if w["value"] == wrapper_value:
+            return f"{w['prefix']}{text}{w['suffix']}"
+    return text
+
 def load_custom_roles():
     try:
         with open(CUSTOM_ROLES_FILE, "r") as f:
@@ -558,45 +588,216 @@ STYLE_MAPS = {
     },
 }
 
+# Hàm phát hiện tiếng Việt có dấu
+import unicodedata
+
+def has_vietnamese_diacritics(text: str) -> bool:
+    """Kiểm tra xem chuỗi có chứa ký tự có dấu tiếng Việt không."""
+    # Các ký tự có dấu cơ bản: ă, â, đ, ê, ô, ơ, ư và các biến thể có dấu thanh
+    vietnamese_chars = set("ăâđêôơưĂÂĐÊÔƠƯ")
+    # Kiểm tra từng ký tự
+    for char in text:
+        # Kiểm tra trực tiếp
+        if char in vietnamese_chars:
+            return True
+        # Kiểm tra ký tự tổ hợp (ví dụ: ấ, ầ, ẩ, ẫ, ậ...)
+        try:
+            name = unicodedata.name(char)
+            # Tìm các từ khóa: COMBINING, ACUTE, GRAVE, HOOK, TILDE, DOT, ...
+            if "COMBINING" in name:
+                return True
+        except ValueError:
+            pass
+        # Nếu ký tự là Latin và có dấu thanh (Unicode tổ hợp hoặc tiền tổ hợp)
+        if unicodedata.combining(char):
+            return True
+    # Nếu không có ký tự có dấu, trả về False
+    return False
+
+# Các mẫu trang trí viền cho tên có dấu
+DECORATIVE_WRAPPERS = [
+    {"label": "♡ ... ♡", "prefix": "♡ ", "suffix": " ♡"},
+    {"label": "꒰ঌ ... ໒꒱", "prefix": "꒰ঌ ", "suffix": " ໒꒱"},
+    {"label": "⋆˚꩜｡ ...", "prefix": "⋆˚꩜｡ ", "suffix": ""},
+    {"label": "🌿 ...", "prefix": "🌿 ", "suffix": ""},
+    {"label": "༄ ... ༄", "prefix": "༄ ", "suffix": " ༄"},
+    {"label": "★ ... ★", "prefix": "★ ", "suffix": " ★"},
+    {"label": "【 ... 】", "prefix": "【", "suffix": "】"},
+    {"label": "┊ ... ┊", "prefix": "┊", "suffix": "┊"},
+]
+
+def apply_decorative_wrapper(text: str, wrapper_index: int) -> str:
+    """Áp dụng một mẫu trang trí viền cho chuỗi text."""
+    if wrapper_index < 0 or wrapper_index >= len(DECORATIVE_WRAPPERS):
+        return text
+    wrapper = DECORATIVE_WRAPPERS[wrapper_index]
+    return wrapper["prefix"] + text + wrapper["suffix"]
+
 def apply_style(text, style):
     if style == "Normal" or style not in STYLE_MAPS:
         return text
     trans = STYLE_MAPS[style]
     return text.translate(trans)
 
-# Define the customrole command group
-customrole_group = discord.app_commands.Group(name="customrole", description="Quản lý custom role (yêu cầu quyền Manage Roles)")
+# Select Menu chọn Style/Viền tương ứng dựa trên loại tên (có dấu / không dấu)
+class StyleSelect(discord.ui.Select):
+    def __init__(self, is_vn: bool, initial_selection: str = None):
+        self.is_vn = is_vn
+        options = []
+        if is_vn:
+            # Tên có dấu tiếng Việt -> Chỉ dùng trang trí viền (Border Wrappers)
+            placeholder = "Chọn mẫu trang trí viền (Tên có dấu)..."
+            for w in DECORATIVE_WRAPPERS:
+                options.append(discord.SelectOption(
+                    label=w["label"],
+                    value=w["value"],
+                    default=(w["value"] == initial_selection) if initial_selection else (w["value"] == "none")
+                ))
+        else:
+            # Tên không dấu -> Dùng Font Styles Unicode
+            placeholder = "Chọn Font Style Unicode (Tên không dấu)..."
+            font_list = ["Normal", "Bold", "Italic", "Bold Italic", "Script", "Fraktur", "Monospace", "Double Struck"]
+            for f in font_list:
+                options.append(discord.SelectOption(
+                    label=f,
+                    value=f,
+                    default=(f == initial_selection) if initial_selection else (f == "Normal")
+                ))
+
+        super().__init__(placeholder=placeholder, min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user != self.view.interaction.user:
+            await interaction.response.send_message("❌ Bạn không phải người dùng lệnh.", ephemeral=True)
+            return
+
+        selected = self.values[0]
+        self.view.current_style = selected
+
+        if self.is_vn:
+            self.view.styled_name = apply_wrapper(self.view.raw_name, selected)
+            style_label = next((w["label"] for w in DECORATIVE_WRAPPERS if w["value"] == selected), selected)
+        else:
+            self.view.styled_name = apply_style(self.view.raw_name, selected)
+            style_label = selected
+
+        embed = self.view.build_preview_embed(style_label)
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+class ConfirmView(View):
+    def __init__(self, interaction, raw_name, styled_name, color_info, target, is_vn, current_style):
+        super().__init__(timeout=90)
+        self.interaction = interaction
+        self.raw_name = raw_name
+        self.styled_name = styled_name
+        self.color_info = color_info
+        self.target = target
+        self.is_vn = is_vn
+        self.current_style = current_style
+
+        # Thêm Dropdown Select tương ứng với loại tên
+        self.style_select = StyleSelect(is_vn=is_vn, initial_selection=current_style)
+        self.add_item(self.style_select)
+
+    def build_preview_embed(self, style_label_display=None):
+        mode_str = "🇻🇳 Tên tiếng Việt (Trang trí viền)" if self.is_vn else "🔤 Tên không dấu (Font Style Unicode)"
+        embed = discord.Embed(
+            title="🔍 Xem trước & Xác nhận tạo Custom Role",
+            description="Bạn có thể chọn/đổi mẫu trang trí bên dưới trước khi bấm **Confirm**.",
+            color=discord.Color.from_str(self.color_info["hex"])
+        )
+        embed.add_field(name="Chế độ phát hiện", value=f"`{mode_str}`", inline=False)
+        embed.add_field(name="Tên gốc", value=f"`{self.raw_name}`", inline=True)
+        embed.add_field(name="Tên role hoàn chỉnh", value=f"**{self.styled_name}**", inline=True)
+        embed.add_field(name="Màu hex", value=f"`{self.color_info['hex']}` ({self.color_info['name']})", inline=False)
+        if self.target:
+            embed.add_field(name="Gán cho", value=self.target.mention, inline=False)
+        embed.set_footer(text="Nhấn Confirm để hoàn tất tạo role, Cancel để hủy.")
+        return embed
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, row=1)
+    async def confirm_button(self, button_interaction: discord.Interaction, button: Button):
+        if button_interaction.user != self.interaction.user:
+            await button_interaction.response.send_message("❌ Bạn không phải người dùng lệnh.", ephemeral=True)
+            return
+        await button_interaction.response.defer(ephemeral=True)
+
+        try:
+            # Tạo role
+            role = await self.interaction.guild.create_role(
+                name=self.styled_name,
+                color=discord.Color.from_str(self.color_info["hex"]),
+                reason=f"Custom role created by {self.interaction.user} (ID: {self.interaction.user.id})"
+            )
+            # Thêm vào tracking JSON
+            add_custom_role(self.interaction.guild_id, role.id)
+
+            # Gán cho target nếu có
+            if self.target:
+                try:
+                    await self.target.add_roles(role, reason=f"Assigned by {self.interaction.user}")
+                except Exception as e:
+                    logger.error(f"Failed to assign role: {e}")
+
+            success_embed = discord.Embed(
+                title="✅ Custom Role đã được tạo thành công!",
+                description=f"Role: {role.mention}\nTên: **{role.name}**\nMàu: `{self.color_info['hex']}`",
+                color=discord.Color.from_str(self.color_info["hex"])
+            )
+            if self.target:
+                success_embed.add_field(name="Đã gán cho", value=self.target.mention, inline=False)
+
+            # Disable các button và select menu
+            for child in self.children:
+                child.disabled = True
+
+            await self.interaction.edit_original_response(embed=success_embed, view=self)
+            await button_interaction.followup.send(f"✅ Đã tạo thành công role **{role.name}**!", ephemeral=True)
+        except discord.Forbidden:
+            await button_interaction.followup.send("❌ Bot không có quyền tạo hoặc gán role này.", ephemeral=True)
+        except Exception as e:
+            await button_interaction.followup.send(f"❌ Lỗi khi tạo role: {e}", ephemeral=True)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, row=1)
+    async def cancel_button(self, button_interaction: discord.Interaction, button: Button):
+        if button_interaction.user != self.interaction.user:
+            await button_interaction.response.send_message("❌ Bạn không phải người dùng lệnh.", ephemeral=True)
+            return
+
+        for child in self.children:
+            child.disabled = True
+        await self.interaction.edit_original_response(content="❌ Đã hủy tạo custom role.", embed=None, view=self)
+        await button_interaction.response.send_message("Đã hủy thành công.", ephemeral=True)
 
 # Subcommand: create
 @customrole_group.command(name="create", description="Tạo một custom role với tên và màu tùy chọn")
 @discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.describe(
-    name="Tên role (có thể dùng emoji/Unicode)",
+    name="Tên role (có thể gõ tiếng Việt có dấu hoặc Tiếng Anh/Unicode)",
     color="Mã màu hex (ví dụ: #FF0000) hoặc tên màu (gõ để tìm)",
     target="Người dùng được gán role (tùy chọn)",
-    style="Kiểu chữ cho tên role"
+    style="Style khởi tạo (Normal / Font Unicode / Mẫu viền)"
 )
 @discord.app_commands.choices(style=[
-    discord.app_commands.Choice(name="Normal", value="Normal"),
-    discord.app_commands.Choice(name="Bold", value="Bold"),
-    discord.app_commands.Choice(name="Italic", value="Italic"),
-    discord.app_commands.Choice(name="Bold Italic", value="Bold Italic"),
-    discord.app_commands.Choice(name="Script (Cursive)", value="Script"),
-    discord.app_commands.Choice(name="Fraktur (Gothic)", value="Fraktur"),
-    discord.app_commands.Choice(name="Monospace", value="Monospace"),
-    discord.app_commands.Choice(name="Double Struck", value="Double Struck"),
+    discord.app_commands.Choice(name="Bình thường (Normal / Không viền)", value="Normal"),
+    discord.app_commands.Choice(name="[Không dấu] Bold", value="Bold"),
+    discord.app_commands.Choice(name="[Không dấu] Italic", value="Italic"),
+    discord.app_commands.Choice(name="[Không dấu] Bold Italic", value="Bold Italic"),
+    discord.app_commands.Choice(name="[Không dấu] Script", value="Script"),
+    discord.app_commands.Choice(name="[Không dấu] Fraktur", value="Fraktur"),
+    discord.app_commands.Choice(name="[Không dấu] Monospace", value="Monospace"),
+    discord.app_commands.Choice(name="[Có dấu] ♡ ... ♡", value="heart"),
+    discord.app_commands.Choice(name="[Có dấu] ꒰ঌ ... ໒꒱", value="wings"),
+    discord.app_commands.Choice(name="[Có dấu] ⋆˚꩜｡ ...", value="galaxy"),
+    discord.app_commands.Choice(name="[Có dấu] 🌿 ...", value="sprout"),
+    discord.app_commands.Choice(name="[Có dấu] ༄ ... ༄", value="wind"),
 ])
-@discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.guild_only()
 @discord.app_commands.autocomplete(color=color_autocomplete)
 async def customrole_create(interaction: discord.Interaction, name: str, color: str, target: discord.Member = None, style: str = "Normal"):
     # Check manager permission (Manage Guild / Admin)
     if not await check_manager_interaction(interaction):
         await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
-        return
-    # Check permissions again (in code)
-    if not interaction.user.guild_permissions.manage_roles and not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ Bạn không có quyền quản lý role.", ephemeral=True)
         return
 
     # Check bot permissions
@@ -610,13 +811,19 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
         await interaction.response.send_message("❌ Tên role không được vượt quá 100 ký tự.", ephemeral=True)
         return
 
-    # Apply style
-    styled_name = apply_style(name, style)
-    if not styled_name:
-        styled_name = name  # fallback
+    # Auto detect tiếng Việt có dấu
+    is_vn = has_vietnamese_diacritics(name)
+
+    if is_vn:
+        # Nếu tên CÓ DẤU -> chỉ áp dụng viền (wrapper), không biến đổi font chữ
+        current_style = style if any(w["value"] == style for w in DECORATIVE_WRAPPERS) else "none"
+        styled_name = apply_wrapper(name, current_style)
+    else:
+        # Nếu tên KHÔNG DẤU -> áp dụng Font Style Unicode
+        current_style = style if style in STYLE_MAPS else "Normal"
+        styled_name = apply_style(name, current_style)
 
     # Validate color
-    # Try to parse as hex
     color_hex = color.strip()
     color_info = None
     if color_hex.startswith('#'):
@@ -626,7 +833,6 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
             await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True)
             return
     else:
-        # Try to find by name in common colors
         found = None
         for c in COMMON_COLORS:
             if c["name"].lower() == color_hex.lower():
@@ -639,7 +845,6 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
                 await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True)
                 return
         else:
-            # maybe it's a hex without #
             if re.match(r'^[0-9A-Fa-f]{6}$', color_hex):
                 try:
                     color_info = await get_color_info(f"#{color_hex}")
@@ -647,7 +852,7 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
                     await interaction.response.send_message(f"❌ {str(e)}", ephemeral=True)
                     return
             else:
-                await interaction.response.send_message("❌ Màu không hợp lệ. Vui lòng nhập mã hex (ví dụ: #FF0000) hoặc tên màu (như Red).", ephemeral=True)
+                await interaction.response.send_message("❌ Mã màu không hợp lệ. Vui lòng nhập mã hex (ví dụ: #FF0000) hoặc tên màu (như Red).", ephemeral=True)
                 return
 
     # Check custom role limit
@@ -656,82 +861,16 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
         await interaction.response.send_message(f"❌ Server đã đạt giới hạn {MAX_CUSTOM_ROLES} custom role.", ephemeral=True)
         return
 
-    # Create preview embed
-    embed = discord.Embed(
-        title="Xác nhận tạo custom role",
-        description="Vui lòng kiểm tra thông tin và xác nhận.",
-        color=discord.Color.from_str(color_info["hex"])
+    view = ConfirmView(
+        interaction=interaction,
+        raw_name=name,
+        styled_name=styled_name,
+        color_info=color_info,
+        target=target,
+        is_vn=is_vn,
+        current_style=current_style
     )
-    embed.add_field(name="Tên role", value=styled_name, inline=False)
-    embed.add_field(name="Màu", value=color_info["hex"], inline=True)
-    embed.add_field(name="Tên màu", value=color_info["name"], inline=True)
-    if target:
-        embed.add_field(name="Gán cho", value=target.mention, inline=False)
-    embed.add_field(name="Style", value=style, inline=True)
-    embed.set_footer(text="Nhấn Confirm để tạo, Cancel để hủy.")
-
-    # Create view with buttons
-    class ConfirmView(View):
-        def __init__(self, interaction, name, styled_name, color_info, target, style):
-            super().__init__(timeout=60)
-            self.interaction = interaction
-            self.name = name
-            self.styled_name = styled_name
-            self.color_info = color_info
-            self.target = target
-            self.style = style
-            self.confirmed = False
-
-        @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
-        async def confirm_button(self, button_interaction: discord.Interaction, button: Button):
-            if button_interaction.user != self.interaction.user:
-                await button_interaction.response.send_message("Bạn không phải người dùng lệnh.", ephemeral=True)
-                return
-            await button_interaction.response.defer(ephemeral=True)
-            self.confirmed = True
-            # Actually create the role
-            try:
-                # Create role
-                role = await self.interaction.guild.create_role(
-                    name=self.styled_name,
-                    color=discord.Color.from_str(self.color_info["hex"]),
-                    reason=f"Custom role created by {self.interaction.user} (ID: {self.interaction.user.id})"
-                )
-                # Add to tracking
-                add_custom_role(self.interaction.guild_id, role.id)
-                # Assign to target if provided
-                if self.target:
-                    await self.target.add_roles(role, reason=f"Assigned by {self.interaction.user}")
-                # Send success message
-                success_embed = discord.Embed(
-                    title="✅ Custom role đã được tạo!",
-                    description=f"Role **{role.mention}** đã được tạo thành công.",
-                    color=discord.Color.from_str(self.color_info["hex"])
-                )
-                if self.target:
-                    success_embed.add_field(name="Đã gán cho", value=self.target.mention, inline=False)
-                await button_interaction.followup.send(embed=success_embed, ephemeral=True)
-                # Disable buttons
-                for child in self.children:
-                    child.disabled = True
-                await self.interaction.edit_original_response(view=self)
-            except discord.Forbidden:
-                await button_interaction.followup.send("❌ Bot không có quyền tạo role hoặc gán role.", ephemeral=True)
-            except discord.HTTPException as e:
-                await button_interaction.followup.send(f"❌ Lỗi khi tạo role: {e}", ephemeral=True)
-
-        @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-        async def cancel_button(self, button_interaction: discord.Interaction, button: Button):
-            if button_interaction.user != self.interaction.user:
-                await button_interaction.response.send_message("Bạn không phải người dùng lệnh.", ephemeral=True)
-                return
-            await button_interaction.response.send_message("Đã hủy tạo role.", ephemeral=True)
-            # Disable buttons
-            for child in self.children:
-                child.disabled = True
-            await self.interaction.edit_original_response(view=self)
-
-    view = ConfirmView(interaction, name, styled_name, color_info, target, style)
+    embed = view.build_preview_embed()
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 # Subcommand: remove
