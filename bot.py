@@ -12,6 +12,7 @@ from discord.ui import View, Button
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import motor.motor_asyncio
+from noitu import start_noitu_game, handle_noitu_message
 
 # Setup logging
 logging.basicConfig(
@@ -166,6 +167,9 @@ async def on_message(message: discord.Message):
     if message.author == bot.user or message.author.bot:
         return
 
+    # Process Nối Từ minigame messages
+    await handle_noitu_message(message)
+
     # Check allowed channel restriction if configured
     if ALLOWED_CHANNEL_ID is not None and message.channel.id != ALLOWED_CHANNEL_ID:
         return
@@ -245,6 +249,14 @@ async def on_message(message: discord.Message):
             await message.reply(f"❌ Có lỗi xảy ra khi gọi AI: `{e}`")
 
 # ================= Slash Commands =================
+
+noitu_group = app_commands.Group(name="noitu", description="Các lệnh trò chơi Nối Từ")
+
+@noitu_group.command(name="start", description="Bắt đầu ván chơi Nối Từ Tiếng Việt")
+async def noitu_start_slash(interaction: discord.Interaction):
+    await start_noitu_game(interaction)
+
+bot.tree.add_command(noitu_group)
 
 @bot.tree.command(name="ping", description="Kiểm tra độ trễ của bot")
 async def ping_slash(interaction: discord.Interaction):
