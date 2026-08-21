@@ -64,9 +64,13 @@ class AIClient:
                                 continue
                             return None
 
-                        # Handle SSE streaming response from 9router
+                        # Handle 9router response: JSON + optional SSE trailer ("data: [DONE]")
                         clean_text = raw_text.strip()
-                        if clean_text.startswith('data:'):
+                        # Remove trailing SSE markers that break json.loads
+                        if '\ndata:' in clean_text:
+                            clean_text = clean_text.split('\ndata:')[0].strip()
+                        elif clean_text.startswith('data:'):
+                            # Pure SSE format: extract JSON from first data line
                             for line in clean_text.split('\n'):
                                 line = line.strip()
                                 if line.startswith('data:') and '[DONE]' not in line:
