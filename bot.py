@@ -354,7 +354,7 @@ def load_custom_roles():
             data = json.load(f)
         # Kiểm tra định dạng: nếu data không phải là dict, reset về {}
         if not isinstance(data, dict):
-            logger.warning(f"Phát hiện data JSON sai định dạng (kiểu {type(data).__name__}), đang reset về {}")
+            logger.warning(f"Phát hiện data JSON sai định dạng (kiểu {type(data).__name__}), đang reset về {{}}")
             data = {}
             save_custom_roles(data)
         return data
