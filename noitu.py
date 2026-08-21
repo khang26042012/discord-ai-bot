@@ -64,19 +64,24 @@ class AIClient:
                                 continue
                             return None
 
-                        # Handle 9router response: JSON + optional SSE trailer ("data: [DONE]")
-                        clean_text = raw_text.strip()
-                        # Remove trailing SSE markers that break json.loads
-                        if '\ndata:' in clean_text:
-                            clean_text = clean_text.split('\ndata:')[0].strip()
-                        elif clean_text.startswith('data:'):
-                            # Pure SSE format: extract JSON from first data line
-                            for line in clean_text.split('\n'):
-                                line = line.strip()
-                                if line.startswith('data:') and '[DONE]' not in line:
-                                    clean_text = line[5:].strip()
+                        # Robust JSON extraction: brace-matching to handle SSE trailers and extra data
+                        raw_stripped = raw_text.strip()
+                        depth = 0
+                        json_start = -1
+                        json_end = -1
+                        for idx, ch in enumerate(raw_stripped):
+                            if ch == '{':
+                                if depth == 0:
+                                    json_start = idx
+                                depth += 1
+                            elif ch == '}':
+                                depth -= 1
+                                if depth == 0 and json_start >= 0:
+                                    json_end = idx + 1
                                     break
-                        res_json = json.loads(clean_text)
+                        if json_start < 0 or json_end < 0:
+                            raise ValueError(f"No valid JSON object found in API response (length={len(raw_stripped)})")
+                        res_json = json.loads(raw_stripped[json_start:json_end])
                         content = res_json["choices"][0]["message"]["content"]
                         # Clean markdown
                         content = re.sub(r"^```json\s*", "", content, flags=re.MULTILINE)
@@ -176,6 +181,7 @@ Nhiệm vụ của bạn:
 ⛔ CẤM BỊA TỪ VÀ CẤM SAI TIẾNG ĐẦU:
 - TIẾNG ĐẦU TIÊN của cụm từ bạn chọn BẮT BUỘC KHỚP VỚI '{clean_exp_first}'. Ví dụ: nếu yêu cầu bắt đầu bằng 'lắm', cụm từ của bạn PHẢI là 'lắm chuyện', 'lắm lời' (BẮT ĐẦU BẰNG 'lắm'). CẤM không được chọn 'đẹp trai' khi yêu cầu là 'lắm'!
 - TUYỆT ĐỐI CẤM ghép 2 tiếng ngẫu nhiên vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
+- ⛔ CHỈ ĐƯỢC DÙNG TIẾNG VIỆT. TUYỆT ĐỐI KHÔNG dùng từ tiếng Anh hay ngôn ngữ khác.
 - Nếu không tìm thấy cụm từ hợp lệ bắt đầu bằng '{clean_exp_first}', bạn PHẢI CHẤP NHẬN THUA bằng cách trả về valid: false.
 
 Trả về duy nhất định dạng JSON:
@@ -199,6 +205,7 @@ NHIỆM VỤ CỦA BẠN:
 3. ⭐ ƯU TIÊN TUYỆT ĐỐI từ THÔNG DỤNG, DỄ HIỂU, ai cũng biết (ví dụ: 'con mèo', 'ăn cơm', 'đi học', 'vui vẻ'). CHỈ khi HẾT từ dễ mới dùng từ khó/hiếm.
 4. Bạn có vốn từ vựng phong phú, hãy tự tin chọn từ phù hợp! Đừng ngại đưa ra từ hay.
 5. TUYỆT ĐỐI CẤM ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
+6. ⛔ CHỈ ĐƯỢC DÙNG TIẾNG VIỆT. TUYỆT ĐỐI KHÔNG dùng từ tiếng Anh hay ngôn ngữ khác (CẤM 'people', 'hello', 'world'...).
 6. Nếu thực sự không tìm được từ nào bắt đầu bằng '{clean_exp_first}', trả về valid: false để chịu thua.
 
 Trả về duy nhất JSON:
