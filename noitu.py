@@ -16,7 +16,7 @@ logger = logging.getLogger("NoiTuGame")
 # Set these env vars: NINEROUTER_API_KEY, AI_BASE_URL, AI_MODEL
 AI_MODEL = os.getenv("AI_MODEL", os.getenv("AI_MODEL", "openai/gpt-oss-120b"))
 AI_API_KEY = os.getenv("NINEROUTER_API_KEY", os.getenv("AI_API_KEY", ""))
-AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.groq.com/openai/v1/chat/completions")
+AI_BASE_URL = os.getenv("AI_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
 NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else None
 
@@ -25,7 +25,11 @@ class AIClient:
     def __init__(self, api_key: str, model: str):
         self.api_key = api_key
         self.model = model
-        self.base_url = AI_BASE_URL
+        # Auto-append /chat/completions if base URL doesn't end with it
+        base = AI_BASE_URL.rstrip('/')
+        if not base.endswith('/chat/completions'):
+            base = base + '/chat/completions'
+        self.base_url = base
 
     async def chat_completion(self, messages: List[Dict[str, str]], json_mode: bool = True, retries: int = 1) -> Optional[str]:
         if not self.api_key:
