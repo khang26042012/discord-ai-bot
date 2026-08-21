@@ -1226,7 +1226,7 @@ async def by_command(
         return
     
     # Lấy danh sách custom role ID
-    data = load_custom_roles()
+    data = await load_custom_roles()
     guild_str = str(interaction.guild_id)
     role_ids = data.get(guild_str, [])
     if not role_ids:
@@ -1253,7 +1253,7 @@ async def by_command(
     message = await target_channel.send(embed=embed, view=view)
     
     # Lưu panel metadata
-    panels = load_panels()
+    panels = await load_panels()
     guild_panels = panels.setdefault(str(interaction.guild_id), {})
     guild_panels[str(message.id)] = {
         "channel_id": target_channel.id,
@@ -1261,7 +1261,7 @@ async def by_command(
         "description": description,
         "color": color
     }
-    save_panels(panels)
+    await save_panels(panels)
     
     # Đăng ký view persistent
     bot.add_view(view, message_id=message.id)
