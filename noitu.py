@@ -14,7 +14,7 @@ logger = logging.getLogger("NoiTuGame")
 
 # Environment variables - Compatible with both Groq and 9router
 # Set these env vars: NINEROUTER_API_KEY, AI_BASE_URL, AI_MODEL
-AI_MODEL = os.getenv("AI_MODEL", os.getenv("AI_MODEL", "openai/gpt-oss-120b"))
+AI_MODEL = os.getenv("AI_MODEL", "groq/openai/gpt-oss-120b")
 AI_API_KEY = os.getenv("NINEROUTER_API_KEY", os.getenv("AI_API_KEY", ""))
 AI_BASE_URL = os.getenv("AI_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
@@ -190,24 +190,22 @@ Trả về duy nhất định dạng JSON:
                 {"role": "user", "content": f"Ra đề: '{current_word}'. Bạn hãy nối tiếp cụm 2 tiếng BẮT ĐẦU BẰNG TIẾNG '{clean_exp_first}'."}
             ]
         else:
-            sys_prompt = f"""Bạn là trọng tài và đối thủ trò chơi Nối Từ Tiếng Việt.
-QUY TẮC BẮT BUỘC CHO NGƯỜI CHƠI:
-1. Cụm từ phải gồm đúng CỤM 2 TIẾNG TIẾNG VIỆT TỰ NHIÊN, CÓ NGHĨA.
-2. Tiếng thứ nhất BẮT BUỘC phải khớp với tiếng: '{clean_exp_first}' (KHÔNG PHÂN BIỆT VIẾT HOA/THƯỜNG).
-3. Cụm từ KHÔNG ĐƯỢC trùng với danh sách đã dùng: [{used_list_str}].
+            sys_prompt = f"""Bạn là ĐỐI THỦ (không phải trọng tài) trong trò chơi Nối Từ Tiếng Việt solo với người chơi.
+Người chơi vừa gửi cụm từ: '{current_word}'.
 
-QUY TẮC BẮT BUỘC CHO AI (BẠN):
-1. Cụm từ của bạn BẮT BUỘC PHẢI BẮT ĐẦU BẰNG TIẾNG THỨ 2 CỦA NGƯỜI CHƠI.
-2. Cụm từ phải là CỤM 2 TIẾNG TỰ NHIÊN, CÓ NGHĨA THỰC TẾ.
-3. TUYỆT ĐỐI CẤM ghép bừa 2 tiếng vô nghĩa để né thua (CẤM 'khoải hứng', 'nhung nhau').
-4. Nếu không tìm được từ hợp lệ, hãy trả về valid: false để chấp nhận thua cuộc.
-5. ⭐ ƯU TIÊN CHỌN TỪ PHỔ THÔNG, DỄ HIỂU mà người chơi bình thường có thể nối tiếp được. CHỈ dùng từ khó/hiếm khi thực sự hết lựa chọn dễ.
+NHIỆM VỤ CỦA BẠN:
+1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT để nối tiếp. Cụm từ BẮT BUỘC PHẢI BẮT ĐẦU BẰNG TIẾNG: '{clean_exp_first}'.
+2. KHÔNG ĐƯỢC trùng với các từ đã dùng: [{used_list_str}].
+3. ⭐ ƯU TIÊN TUYỆT ĐỐI từ THÔNG DỤNG, DỄ HIỂU, ai cũng biết (ví dụ: 'con mèo', 'ăn cơm', 'đi học', 'vui vẻ'). CHỈ khi HẾT từ dễ mới dùng từ khó/hiếm.
+4. Bạn có vốn từ vựng phong phú, hãy tự tin chọn từ phù hợp! Đừng ngại đưa ra từ hay.
+5. TUYỆT ĐỐI CẤM ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
+6. Nếu thực sự không tìm được từ nào bắt đầu bằng '{clean_exp_first}', trả về valid: false để chịu thua.
 
-Trả về duy nhất định dạng JSON:
+Trả về duy nhất JSON:
 {{
   "valid": true/false,
-  "reason": "Lý do nếu không hợp lệ",
-  "ai_word": "Cụm 2 tiếng nối tiếp của AI (nếu valid=true)",
+  "reason": "Lý do nếu thua",
+  "ai_word": "Cụm 2 tiếng bắt đầu bằng '{clean_exp_first}' (nếu valid=true)",
   "ai_last_syllable": "Tiếng thứ 2 trong cụm từ của AI"
 }}"""
             messages = [
