@@ -64,25 +64,46 @@ class AIClient:
                                 continue
                             return None
 
-                        # Robust JSON extraction: brace-matching to handle SSE trailers and extra data
+                        # Handle both standard JSON and SSE streaming responses from 9router
                         raw_stripped = raw_text.strip()
-                        depth = 0
-                        json_start = -1
-                        json_end = -1
-                        for idx, ch in enumerate(raw_stripped):
-                            if ch == '{':
-                                if depth == 0:
-                                    json_start = idx
-                                depth += 1
-                            elif ch == '}':
-                                depth -= 1
-                                if depth == 0 and json_start >= 0:
-                                    json_end = idx + 1
-                                    break
-                        if json_start < 0 or json_end < 0:
-                            raise ValueError(f"No valid JSON object found in API response (length={len(raw_stripped)})")
-                        res_json = json.loads(raw_stripped[json_start:json_end])
-                        content = res_json["choices"][0]["message"]["content"]
+                        
+                        # Detect SSE streaming format (starts with "data:")
+                        if raw_stripped.startswith('data:'):
+                            # Parse SSE chunks and concatenate content deltas
+                            content_parts = []
+                            for line in raw_stripped.split('\n'):
+                                line = line.strip()
+                                if line.startswith('data:') and '[DONE]' not in line:
+                                    try:
+                                        chunk = json.loads(line[5:].strip())
+                                        delta = chunk.get('choices', [{}])[0].get('delta', {})
+                                        if 'content' in delta:
+                                            content_parts.append(delta['content'])
+                                    except (json.JSONDecodeError, IndexError, KeyError):
+                                        pass
+                            if not content_parts:
+                                raise ValueError("SSE stream contained no content deltas")
+                            content = ''.join(content_parts)
+                        else:
+                            # Standard JSON response with optional SSE trailer
+                            # Use brace-matching to extract first complete JSON object
+                            depth = 0
+                            json_start = -1
+                            json_end = -1
+                            for idx, ch in enumerate(raw_stripped):
+                                if ch == '{':
+                                    if depth == 0:
+                                        json_start = idx
+                                    depth += 1
+                                elif ch == '}':
+                                    depth -= 1
+                                    if depth == 0 and json_start >= 0:
+                                        json_end = idx + 1
+                                        break
+                            if json_start < 0 or json_end < 0:
+                                raise ValueError(f"No valid JSON object found in API response (length={len(raw_stripped)})")
+                            res_json = json.loads(raw_stripped[json_start:json_end])
+                            content = res_json["choices"][0]["message"]["content"]
                         # Clean markdown
                         content = re.sub(r"^```json\s*", "", content, flags=re.MULTILINE)
                         content = re.sub(r"^```\s*", "", content, flags=re.MULTILINE)
