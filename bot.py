@@ -249,6 +249,109 @@ async def on_message(message: discord.Message):
             logger.error(f"Error calling Xkiro AI API: {e}")
             await message.reply(f"❌ Có lỗi xảy ra khi gọi AI: `{e}`")
 
+# ================= Clear Channel Command =================
+
+class ClearConfirmView(discord.ui.View):
+    def __init__(self, author_id: int, target_channel: discord.TextChannel, timeout: float = 60.0):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+        self.target_channel = target_channel
+
+    @discord.ui.button(label="✅ Xác nhận Xóa", style=discord.ButtonStyle.danger, custom_id="clear_confirm_btn")
+    async def confirm_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("❌ Bạn không có quyền thực hiện thao tác này!", ephemeral=True)
+            return
+
+        # Disable buttons
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content="🔄 **Đang tiến hành xóa tin nhắn...**", embed=None, view=self)
+
+        deleted_count = 0
+        now = datetime.now(timezone.utc)
+        fourteen_days_ago = now - timedelta(days=14)
+
+        try:
+            # Phase 1: Bulk delete messages younger than 14 days
+            bulk_messages = []
+            old_messages = []
+
+            async for msg in self.target_channel.history(limit=None):
+                if msg.created_at > fourteen_days_ago:
+                    bulk_messages.append(msg)
+                else:
+                    old_messages.append(msg)
+
+            # Process bulk delete in chunks of 100
+            for i in range(0, len(bulk_messages), 100):
+                chunk = bulk_messages[i:i+100]
+                try:
+                    await self.target_channel.delete_messages(chunk)
+                    deleted_count += len(chunk)
+                except Exception as e:
+                    logger.warning(f"Bulk delete chunk failed, falling back to individual delete: {e}")
+                    for m in chunk:
+                        try:
+                            await m.delete()
+                            deleted_count += 1
+                            await asyncio.sleep(0.2)
+                        except Exception:
+                            pass
+
+            # Phase 2: Delete messages older than 14 days individually
+            for m in old_messages:
+                try:
+                    await m.delete()
+                    deleted_count += 1
+                    await asyncio.sleep(0.3)  # Respect rate limit
+                except Exception as e:
+                    logger.warning(f"Failed to delete individual message {m.id}: {e}")
+
+            # Send final completion embed
+            done_embed = discord.Embed(
+                title="✅ ĐÃ XÓA TOÀN BỘ TIN NHẮN",
+                description=f"Đã xóa thành công **{deleted_count}** tin nhắn trong kênh {self.target_channel.mention}.",
+                color=discord.Color.green()
+            )
+            await self.target_channel.send(embed=done_embed)
+
+        except Exception as e:
+            logger.error(f"Error during clear channel: {e}")
+            await self.target_channel.send(f"❌ Có lỗi xảy ra trong quá trình xóa tin nhắn: `{e}`")
+
+    @discord.ui.button(label="❌ Hủy bỏ", style=discord.ButtonStyle.secondary, custom_id="clear_cancel_btn")
+    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("❌ Bạn không có quyền thực hiện thao tác này!", ephemeral=True)
+            return
+
+        for child in self.children:
+            child.disabled = True
+        await interaction.response.edit_message(content="❌ Đã hủy thao tác xóa tin nhắn.", embed=None, view=self)
+
+
+@bot.tree.command(name="clear", description="Xóa toàn bộ tin nhắn trong một kênh")
+@discord.app_commands.default_permissions(manage_guild=True)
+@discord.app_commands.describe(channel="Chọn kênh muốn xóa toàn bộ tin nhắn")
+@discord.app_commands.guild_only()
+async def clear_slash(interaction: discord.Interaction, channel: discord.TextChannel):
+    if not await check_manager_interaction(interaction):
+        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server hoặc Administrator để dùng lệnh này.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="⚠️ XÁC NHẬN XÓA TOÀN BỘ TIN NHẮN",
+        description=(
+            f"Bạn có chắc chắn muốn xóa **TOÀN BỘ** tin nhắn trong kênh {channel.mention}?\n\n"
+            "🚨 **CẢNH BÁO:** Hành động này **KHÔNG THỂ HOÀN TÁC**!"
+        ),
+        color=discord.Color.red()
+    )
+    view = ClearConfirmView(author_id=interaction.user.id, target_channel=channel)
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
 # ================= Slash Commands =================
 
 noitu_group = discord.app_commands.Group(name="noitu", description="Các lệnh trò chơi Nối Từ")
