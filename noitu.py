@@ -171,6 +171,7 @@ Nhiệm vụ của bạn:
 1. Tìm 1 CỤM 2 TIẾNG TIẾNG VIỆT TỰ NHIÊN, CÓ NGHĨA THỰC TẾ (bao gồm từ ghép, cụm tính từ, cụm danh từ thông dụng) để nối tiếp.
 2. Cụm từ của bạn BẮT BUỘC phải BẮT ĐẦU BẰNG TIẾNG: '{clean_exp_first}' (LƯU Ý CỰC KỲ QUAN TRỌNG: TIẾNG ĐẦU TIÊN TRONG CỤM TỪ CỦA BẠN PHẢI LÀ '{clean_exp_first}', KHÔNG ĐƯỢC DÙNG TIẾNG ĐẦU NÀO KHÁC!).
 3. Cụm từ của bạn KHÔNG ĐƯỢC trùng với danh sách đã dùng (so sánh không phân biệt viết hoa/thường): [{used_list_str}].
+4. ⭐ ƯU TIÊN CHỌN TỪ PHỔ THÔNG, DỄ HIỂU mà ai cũng biết (ví dụ: 'hồng hào', 'hồng đào', 'hồng thắm'). CHỈ khi nào HẾT từ dễ mới được dùng từ khó/hiếm gặp (như 'hồng lụa', 'hồng bì'). TUYỆT ĐỐI TRÁNH chọn từ quá chuyên ngành hoặc ít người biết.
 
 ⛔ CẤM BỊA TỪ VÀ CẤM SAI TIẾNG ĐẦU:
 - TIẾNG ĐẦU TIÊN của cụm từ bạn chọn BẮT BUỘC KHỚP VỚI '{clean_exp_first}'. Ví dụ: nếu yêu cầu bắt đầu bằng 'lắm', cụm từ của bạn PHẢI là 'lắm chuyện', 'lắm lời' (BẮT ĐẦU BẰNG 'lắm'). CẤM không được chọn 'đẹp trai' khi yêu cầu là 'lắm'!
@@ -200,6 +201,7 @@ QUY TẮC BẮT BUỘC CHO AI (BẠN):
 2. Cụm từ phải là CỤM 2 TIẾNG TỰ NHIÊN, CÓ NGHĨA THỰC TẾ.
 3. TUYỆT ĐỐI CẤM ghép bừa 2 tiếng vô nghĩa để né thua (CẤM 'khoải hứng', 'nhung nhau').
 4. Nếu không tìm được từ hợp lệ, hãy trả về valid: false để chấp nhận thua cuộc.
+5. ⭐ ƯU TIÊN CHỌN TỪ PHỔ THÔNG, DỄ HIỂU mà người chơi bình thường có thể nối tiếp được. CHỈ dùng từ khó/hiếm khi thực sự hết lựa chọn dễ.
 
 Trả về duy nhất định dạng JSON:
 {{
