@@ -15,8 +15,8 @@ logger = logging.getLogger("NoiTuGame")
 # Environment variables - Compatible with both Groq and 9router
 # Set these env vars: NINEROUTER_API_KEY, AI_BASE_URL, AI_MODEL
 AI_MODEL = os.getenv("AI_MODEL", "qwen/qwen3.7-max")
-AI_API_KEY = os.getenv("NINEROUTER_API_KEY", os.getenv("AI_API_KEY", ""))
-AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.xkiro.com/v1")
+AI_API_KEY = os.getenv("NINEROUTER_API_KEY", os.getenv("AI_API_KEY", "sk-edf12b35e2ae5e24-2skod2-7d143f29"))
+AI_BASE_URL = os.getenv("AI_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
 NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else None
 
