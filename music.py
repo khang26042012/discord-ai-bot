@@ -162,9 +162,11 @@ def _can_moderate(interaction: discord.Interaction) -> bool:
 
 # ================= YT-DLP HELPERS =================
 
-def _sync_extract(query: str, search: bool = False, clients=None):
-    """Chay blocking yt-dlp trong executor (voi bo player_client chi dinh)."""
+def _sync_extract(query: str, search: bool = False, clients=None, use_cookies: bool = True):
+    """Chay blocking yt-dlp trong executor (client + cookies tuy chon tung lan thu)."""
     opts = dict(YTDL_OPTS_BASE)
+    if not use_cookies:
+        opts.pop("cookiefile", None)   # bo cookies cho client noman
     if search:
         opts["default_search"] = f"ytsearch{SEARCH_RESULTS}"
     if clients:
@@ -174,11 +176,13 @@ def _sync_extract(query: str, search: bool = False, clients=None):
 
 
 def _is_retryable(err_text: str) -> bool:
-    """Loi nen thu client khac (bot-check, trang stale...)."""
+    """Loi nen thu client khac (bot-check, stale page, het format...)."""
     t = err_text.lower()
     return ("sign in to confirm" in t or "not a bot" in t
             or ("cookies" in t and "youtube" in t)
             or "page needs to be reloaded" in t
+            or "requested format is not available" in t
+            or "no formats" in t
             or "request got redirected" in t)
 
 
@@ -187,34 +191,44 @@ def _is_bot_check(err_text: str) -> bool:
     return _is_retryable(err_text)
 
 
-def _client_chain():
-    """Thu tu thu client: co cookies -> uu tien android/web truoc (da dang nhap)."""
+def _client_attempts():
+    """
+    Tra ve danh sach (player_clients, dung_cookies_khong).
+    - tv/ios: KHONG can PO token nhung XUNG DOT voi cookies (loi 'reload page')
+      -> chet che do noman danh.
+    - android/web: can cookies de qua bot-check nhung co the bi loc format (PO token).
+    Ket hop ca hai kieu de max kha nang thanh cong.
+    """
     if "cookiefile" in YTDL_OPTS_BASE:
-        return [["android", "web"], ["tv", "ios"], ["tv_embedded", "android_vr"]]
-    return YT_CLIENT_FALLBACKS
+        return [
+            (["tv", "ios"], False),                    # noman: khong xung dot cookies
+            (["android", "web"], True),                # co cookies: dang nhap that
+            (["tv_embedded", "android_vr"], False),
+        ]
+    return [(c, True) for c in YT_CLIENT_FALLBACKS]
 
 
 async def _extract_with_fallback(query: str, search: bool = False):
     """
-    Extract voi chuoi player_client du phong.
-    Gap bot-check / stale page -> tu doi client khac den khi thanh cong.
+    Extract voi chuoi player_client du phong (co/ca cookies).
+    Gap bot-check / stale page / het format -> doi cach truy cap den khi thanh cong.
     """
     last_err: Optional[Exception] = None
-    chain = _client_chain()
-    for i, clients in enumerate(chain):
+    attempts = _client_attempts()
+    for i, (clients, use_cookies) in enumerate(attempts):
         try:
             # chay trong executor de khong block event loop
             data = await asyncio.get_event_loop().run_in_executor(
-                None, lambda q=query, c=clients, s=search: _sync_extract(q, s, c))
+                None, lambda q=query, c=clients, u=use_cookies, s=search: _sync_extract(q, s, c, u))
             if data is not None and (not search or data.get("entries")):
                 if i > 0:
-                    logger.info(f"[Music] Client set #{i + 1} ({clients}) hoat dong")
+                    logger.info(f"[Music] Cach truy cap #{i + 1} ({clients}, cookies={use_cookies}) hoat dong")
                 return data
             last_err = last_err or RuntimeError("Khong co ket qua")
         except Exception as e:
             last_err = e
             if _is_retryable(str(e)):
-                logger.warning(f"[Music] Client {clients} bi tu choi ({str(e)[:60]}...) -> thu bo tiep theo...")
+                logger.warning(f"[Music] Client {clients} (cookies={use_cookies}) bi tu choi ({str(e)[:60]}...) -> thu cach tiep theo...")
                 continue
             raise  # loi khac (URL sai...) -> bao ngay
     raise last_err
