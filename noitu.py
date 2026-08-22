@@ -31,7 +31,7 @@ class AIClient:
             base = base + '/chat/completions'
         self.base_url = base
 
-    async def chat_completion(self, messages: List[Dict[str, str]], json_mode: bool = True, retries: int = 1) -> Optional[str]:
+    async def chat_completion(self, messages: List[Dict[str, str]], json_mode: bool = True, retries: int = 1, temperature: float = 0.5) -> Optional[str]:
         if not self.api_key:
             logger.error("AI_API_KEY is not configured.")
             return None
@@ -44,7 +44,7 @@ class AIClient:
         data: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
-            "temperature": 0.5
+            "temperature": temperature
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
@@ -137,7 +137,7 @@ Trả về duy nhất JSON: {"is_real": true/false}"""
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Cụm từ: '{word}' có phải cách nói tự nhiên, thông dụng trong tiếng Việt không?"}
         ]
-        res = await self.chat_completion(messages, json_mode=True)
+        res = await self.chat_completion(messages, json_mode=True, temperature=0.1)
         if not res:
             return True # Fallback if API fails
 
@@ -154,6 +154,7 @@ Trả về duy nhất JSON: {"is_real": true/false}"""
 Nhiệm vụ: Kiểm tra cụm từ ra đề của người chơi.
 YÊU CẦU BẮT BUỘC:
 1. Cụm từ phải đúng CỤM 2 TIẾNG TIẾNG VIỆT CƠ BẢN, THÔNG DỤNG (có nghĩa trong tiếng Việt).
+   - CHẤP NHẬN mọi loại từ ghép tự nhiên: danh từ ('con mèo', 'hoa hồng'), động từ ('ăn cơm', 'đi học'), tính từ ('vui vẻ', 'yêu thương'), cảm thán/phó từ ('đẹp quá', 'to lắm', 'đẹp lắm').
 2. Tránh từ Hán Việt quá hiếm, từ chuyên ngành.
 3. Trả về đúng định dạng JSON:
 {
@@ -165,12 +166,12 @@ YÊU CẦU BẮT BUỘC:
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Kiểm tra cụm từ ra đề: '{phrase}'"}
         ]
-        res = await self.chat_completion(messages, json_mode=True)
+        res = await self.chat_completion(messages, json_mode=True, temperature=0.1)
         words = [clean_syllable(w) for w in phrase.strip().split() if clean_syllable(w)]
         if not res:
             if len(words) == 2:
-                return {"valid": True, "reason": "", "last_syllable": words[1]}
-            return {"valid": False, "reason": "Cụm từ phải gồm đúng 2 tiếng tiếng Việt.", "last_syllable": None}
+                return {"valid": True, "reason": "", "last_syllable": words[1], "api_error": True}
+            return {"valid": False, "reason": "Cụm từ phải gồm đúng 2 tiếng tiếng Việt.", "last_syllable": None, "api_error": True}
 
         try:
             data = json.loads(res)
@@ -187,7 +188,10 @@ YÊU CẦU BẮT BUỘC:
 
     async def validate_and_next_singleplayer(self, current_word: str, expected_first_syllable: str, used_words: Set[str], is_starter: bool = False) -> Dict[str, Any]:
         """Validate player word and generate AI response for Singleplayer mode."""
-        used_list_str = ", ".join(list(used_words))
+        recent_used = list(used_words)
+        if len(recent_used) > 60:
+            recent_used = recent_used[-60:]  # chỉ gửi 60 từ gần nhất vào prompt, tránh phình token
+        used_list_str = ", ".join(recent_used)
         clean_exp_first = clean_syllable(expected_first_syllable)
         
         if is_starter:
@@ -227,9 +231,9 @@ NHIỆM VỤ CỦA BẠN:
 3. ⭐ ƯU TIÊN TUYỆT ĐỐI từ THÔNG DỤNG, DỄ HIỂU, ai cũng biết (ví dụ: 'con mèo', 'ăn cơm', 'đi học', 'vui vẻ'). CHỈ khi HẾT từ dễ mới dùng từ khó/hiếm.
 4. Bạn có vốn từ vựng phong phú, hãy tự tin chọn từ phù hợp! Đừng ngại đưa ra từ hay.
 5. TUYỆT ĐỐI CẤM ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
-7. ⛔ CẤM đảo ngược từ vừa được đưa ra (ví dụ: 'khổ đau' → CẤM 'đau khổ', 'yêu thương' → CẤM 'thương yêu').
-6. ⛔ CHỈ ĐƯỢC DÙNG TIẾNG VIỆT. TUYỆT ĐỐI KHÔNG dùng từ tiếng Anh hay ngôn ngữ khác (CẤM 'people', 'hello', 'world'...).
-6. Nếu thực sự không tìm được từ nào bắt đầu bằng '{clean_exp_first}', trả về valid: false để chịu thua.
+6. ⛔ CẤM đảo ngược từ vừa được đưa ra (ví dụ: 'khổ đau' → CẤM 'đau khổ', 'yêu thương' → CẤM 'thương yêu').
+7. ⛔ CHỈ ĐƯỢC DÙNG TIẾNG VIỆT. TUYỆT ĐỐI KHÔNG dùng từ tiếng Anh hay ngôn ngữ khác (CẤM 'people', 'hello', 'world'...).
+8. Nếu thực sự không tìm được từ nào bắt đầu bằng '{clean_exp_first}', trả về valid: false để chịu thua.
 
 Trả về duy nhất JSON:
 {{
@@ -243,41 +247,67 @@ Trả về duy nhất JSON:
                 {"role": "user", "content": f"Người chơi gửi: '{current_word}'"}
             ]
 
-        res = await self.chat_completion(messages, json_mode=True)
-        if not res:
-            return {"valid": False, "reason": "Không thể kết nối API AI (timeout/network error)."}
+        # Retry loop: nếu AI trả về từ vi phạm (sai tiếng đầu / đảo ngược / bịa từ),
+        # cho AI thử lại 1 lần kèm phản hồi sửa lỗi thay vì thua ngay.
+        last_reject_reason = None
+        for attempt in range(2):
+            attempt_messages = messages
+            if attempt > 0 and last_reject_reason:
+                attempt_messages = messages + [
+                    {"role": "user", "content": f"Lần trả lời trước của bạn đã bị từ chối vì: {last_reject_reason}. Hãy đưa ra MỘT CỤM TỪ KHÁC hoàn toàn, tuân thủ đúng quy tắc (bắt đầu bằng tiếng '{clean_exp_first}', gồm đúng 2 tiếng tiếng Việt có thật)."}
+                ]
 
-        try:
-            data = json.loads(res)
+            res = await self.chat_completion(attempt_messages, json_mode=True)
+            if not res:
+                if attempt == 0:
+                    await asyncio.sleep(1)
+                    continue
+                return {"valid": False, "reason": "Không thể kết nối API AI (timeout/network error).", "api_error": True}
+
+            try:
+                data = json.loads(res)
+            except Exception as e:
+                logger.error(f"JSON parse error in validate_and_next_singleplayer: {e} | Raw content: {res}")
+                if attempt == 0:
+                    continue
+                return {"valid": False, "reason": "Lỗi định dạng dữ liệu kiểm tra từ AI."}
+
             ai_word = data.get("ai_word")
-            if data.get("valid") and ai_word:
-                # Code-level Enforce First Syllable Match for AI word!
-                ai_words = [clean_syllable(w) for w in ai_word.strip().split() if clean_syllable(w)]
-                if len(ai_words) != 2 or ai_words[0] != clean_exp_first:
-                    logger.warning(f"AI returned word '{ai_word}' which does NOT start with required syllable '{clean_exp_first}'. Rejecting!")
-                    return {"valid": False, "reason": f"AI đưa ra cụm từ '{ai_word}' không bắt đầu bằng tiếng '{clean_exp_first}'."}
+            if not (data.get("valid") and ai_word):
+                # AI tự nhận thua → tôn trọng quyết định
+                return data
 
-                # Check for reversed word (e.g., "khổ đau" → "đau khổ")
-                player_words = [clean_syllable(w) for w in current_word.strip().split() if clean_syllable(w)]
-                ai_words_list = [clean_syllable(w) for w in ai_word.strip().split() if clean_syllable(w)]
-                if len(player_words) == 2 and len(ai_words_list) == 2:
-                    if ai_words_list[0] == player_words[1] and ai_words_list[1] == player_words[0]:
-                        logger.warning(f"AI returned reversed word '{ai_word}' of player's '{current_word}'. Rejecting!")
-                        return {"valid": False, "reason": f"AI không được đảo ngược từ '{current_word}' thành '{ai_word}'."}
+            # --- Code-level enforcement ---
+            ai_words_list = [clean_syllable(w) for w in ai_word.strip().split() if clean_syllable(w)]
+            if len(ai_words_list) != 2 or ai_words_list[0] != clean_exp_first:
+                last_reject_reason = f"cụm từ '{ai_word}' không bắt đầu bằng tiếng '{clean_exp_first}'"
+                logger.warning(f"AI word '{ai_word}' rejected (attempt {attempt+1}): {last_reject_reason}. Retrying...")
+                continue
 
-                # 2nd-layer validation for AI word
-                is_real = await self.is_real_vietnamese_word(ai_word)
-                if not is_real:
-                    logger.warning(f"AI generated fake/invalid word '{ai_word}'. Rejecting AI word!")
-                    return {"valid": False, "reason": f"Cụm từ '{ai_word}' không phải là cách nói tự nhiên có thật."}
-            return data
-        except Exception as e:
-            logger.error(f"JSON parse error in validate_and_next_singleplayer: {e} | Raw content: {res}")
-            return {"valid": False, "reason": "Lỗi định dạng dữ liệu kiểm tra từ AI."}
+            player_words = [clean_syllable(w) for w in current_word.strip().split() if clean_syllable(w)]
+            if len(player_words) == 2 and len(ai_words_list) == 2:
+                if ai_words_list[0] == player_words[1] and ai_words_list[1] == player_words[0]:
+                    last_reject_reason = f"đảo ngược từ '{current_word}' thành '{ai_word}' (CẤM đảo ngược)"
+                    logger.warning(f"AI word '{ai_word}' rejected (attempt {attempt+1}): {last_reject_reason}. Retrying...")
+                    continue
+
+            is_real = await self.is_real_vietnamese_word(ai_word)
+            if not is_real:
+                last_reject_reason = f"cụm từ '{ai_word}' không phải là cách nói tự nhiên có thật"
+                logger.warning(f"AI word '{ai_word}' rejected (attempt {attempt+1}): {last_reject_reason}. Retrying...")
+                continue
+
+            return data  # Hợp lệ hoàn toàn
+
+        # Hết 2 lần thử mà vẫn vi phạm → AI thua
+        return {"valid": False, "reason": f"AI không thể đưa ra cụm từ hợp lệ ({last_reject_reason or 'lỗi không xác định'})."}
 
     async def validate_multiplayer_word(self, current_word: str, expected_first_syllable: str, used_words: Set[str]) -> Dict[str, Any]:
         """Validate player word in Multiplayer mode."""
-        used_list_str = ", ".join(list(used_words))
+        recent_used = list(used_words)
+        if len(recent_used) > 60:
+            recent_used = recent_used[-60:]
+        used_list_str = ", ".join(recent_used)
         clean_exp_first = clean_syllable(expected_first_syllable)
         sys_prompt = f"""Bạn là trọng tài trò chơi Nối Từ Tiếng Việt.
 QUY TẮC BẮT BUỘC:
@@ -296,12 +326,12 @@ Trả về duy nhất định dạng JSON:
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": f"Người chơi gửi: '{current_word}'"}
         ]
-        res = await self.chat_completion(messages, json_mode=True)
+        res = await self.chat_completion(messages, json_mode=True, temperature=0.1)
         words = [clean_syllable(w) for w in current_word.strip().split() if clean_syllable(w)]
         if not res:
             if len(words) == 2 and words[0] == clean_exp_first and normalize_word(current_word) not in used_words:
-                return {"valid": True, "reason": "", "last_syllable": words[1]}
-            return {"valid": False, "reason": "Cụm từ không hợp lệ.", "last_syllable": None}
+                return {"valid": True, "reason": "", "last_syllable": words[1], "api_error": True}
+            return {"valid": False, "reason": "Cụm từ không hợp lệ.", "last_syllable": None, "api_error": True}
 
         try:
             data = json.loads(res)
@@ -347,6 +377,13 @@ class NoiTuGameState:
 
 # Store active games per channel_id
 game_states: Dict[int, NoiTuGameState] = {}
+
+
+def rearm_timer(state: "NoiTuGameState", coro):
+    """Hủy timer cũ (nếu còn) trước khi hẹn timer mới — chống chồng timer khiến người chơi bị loại sớm."""
+    if state.timer_task and not state.timer_task.done():
+        state.timer_task.cancel()
+    state.timer_task = asyncio.create_task(coro)
 
 
 class LobbyJoinView(discord.ui.View):
@@ -454,7 +491,7 @@ async def start_noitu_game(interaction: discord.Interaction):
             f"👉 {user_mention}, tới lượt bạn! Hãy **ra đề** bằng 1 cụm 2 tiếng! (Bạn có 20 giây)"
         )
         # Start timer for starter word
-        state.timer_task = asyncio.create_task(singleplayer_timeout_handler(interaction.channel, state, participants[0]))
+        rearm_timer(state, singleplayer_timeout_handler(interaction.channel, state, participants[0]))
 
     else:
         # 5B: Multiplayer
@@ -474,7 +511,7 @@ async def start_noitu_game(interaction: discord.Interaction):
             f"👉 Người đầu tiên <@{starter_id}> có 20 giây để **ra đề** bằng 1 cụm 2 tiếng!"
         )
         # Start timer for starter word
-        state.timer_task = asyncio.create_task(multiplayer_timeout_handler(interaction.channel, state, starter_id))
+        rearm_timer(state, multiplayer_timeout_handler(interaction.channel, state, starter_id))
 
 
 async def singleplayer_timeout_handler(channel: discord.TextChannel, state: NoiTuGameState, user_id: int):
@@ -523,10 +560,10 @@ async def multiplayer_timeout_handler(channel: discord.TextChannel, state: NoiTu
 
                 if state.status == "WAITING_STARTER":
                     await channel.send(f"👉 Chuyển lượt ra đề cho <@{next_user_id}>! Bạn có 20 giây.")
-                    state.timer_task = asyncio.create_task(multiplayer_timeout_handler(channel, state, next_user_id))
+                    rearm_timer(state, multiplayer_timeout_handler(channel, state, next_user_id))
                 else:
                     await channel.send(f"👉 Tới lượt <@{next_user_id}>! Cần nối bằng từ bắt đầu bằng **'{state.last_syllable}'** (Bạn có 20 giây)")
-                    state.timer_task = asyncio.create_task(multiplayer_timeout_handler(channel, state, next_user_id))
+                    rearm_timer(state, multiplayer_timeout_handler(channel, state, next_user_id))
     except asyncio.CancelledError:
         pass
 
@@ -575,7 +612,7 @@ async def handle_noitu_message(message: discord.Message):
                 if not val["valid"]:
                     await message.add_reaction("❌")
                     await message.reply(f"❌ {message.author.mention} Đề không hợp lệ: {val['reason']}. Vui lòng ra đề khác (cụm 2 tiếng)!")
-                    state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 
                 await message.add_reaction("✅")
@@ -587,6 +624,13 @@ async def handle_noitu_message(message: discord.Message):
 
                 # AI turn to respond to starter phrase: expected first syllable is the last word of starter phrase!
                 ai_res = await groq_client.validate_and_next_singleplayer(content, expected_last_syllable, state.used_words, is_starter=True)
+                if ai_res.get("api_error"):
+                    # Lỗi hạ tầng → không kết thúc ván, cho người chơi ra đề lại
+                    state.used_words.discard(norm_content)
+                    await message.add_reaction("⚠️")
+                    await message.reply("⚠️ AI đang gặp sự cố kết nối. Vui lòng ra đề lại sau giây lát!")
+                    rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    return
                 if not ai_res.get("valid") or not ai_res.get("ai_word"):
                     reason_msg = ai_res.get("reason", "")
                     logger.warning(f"AI failed to respond to starter phrase '{content}': {reason_msg}")
@@ -600,11 +644,17 @@ async def handle_noitu_message(message: discord.Message):
                 # Extra check if AI selected a duplicate despite prompt rules
                 if norm_ai_word in state.used_words:
                     logger.warning(f"AI selected duplicate word '{ai_word}', retrying AI completion once...")
-                    state.used_words.add(norm_ai_word) # temporarily add to force new choice
-                    ai_res_retry = await groq_client.validate_and_next_singleplayer(content, expected_last_syllable, state.used_words, is_starter=True)
-                    if ai_res_retry.get("valid") and ai_res_retry.get("ai_word"):
+                    # Truyền bản sao có từ trùng để ép AI chọn khác, KHÔNG pollute bộ used thật
+                    ai_res_retry = await groq_client.validate_and_next_singleplayer(
+                        content, expected_last_syllable, state.used_words | {norm_ai_word}, is_starter=True)
+                    if ai_res_retry.get("valid") and ai_res_retry.get("ai_word") and normalize_word(ai_res_retry["ai_word"]) not in state.used_words:
                         ai_word = ai_res_retry["ai_word"]
                         norm_ai_word = normalize_word(ai_word)
+                if norm_ai_word in state.used_words:
+                    # Vẫn trùng sau retry → AI thua công bằng (từ trùng không được chấp nhận)
+                    await message.channel.send(f"🎉 **AI KHÔNG NỐI TIẾP ĐƯỢC CỤM TỪ!** {message.author.mention} ĐÃ THẮNG CUỘC!")
+                    await finish_game(message.channel, state, winner_text=f"{message.author.mention}")
+                    return
 
                 state.used_words.add(norm_ai_word)
                 state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
@@ -613,30 +663,52 @@ async def handle_noitu_message(message: discord.Message):
 
                 await message.channel.send(f"🐭 **Chuột dethw:** `{ai_word}`")
                 await message.channel.send(f"👉 Tới lượt {message.author.mention}! Cần nối cụm từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
-                state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
+                rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
 
             elif state.status == "PLAYING":
                 # Validate player response phrase
-                # Extract player's last syllable for AI to connect next
                 player_words_clean = [clean_syllable(w) for w in content.strip().split() if clean_syllable(w)]
                 player_last_syllable = player_words_clean[-1] if len(player_words_clean) >= 2 else state.last_syllable
+
+                # ⭐ Enforce chain rule: tiếng đầu của người chơi PHẢI khớp tiếng yêu cầu
+                required_syl = clean_syllable(state.last_syllable) if state.last_syllable else None
+                if required_syl and (len(player_words_clean) < 2 or player_words_clean[0] != required_syl):
+                    await message.add_reaction("❌")
+                    await message.reply(
+                        f"❌ {message.author.mention} Cụm từ phải gồm đúng 2 tiếng và bắt đầu bằng **'{state.last_syllable}'**! Vui lòng gửi lại."
+                    )
+                    rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    return
+
+                # Thêm từ người chơi vào used TRƯỚC khi gọi AI để AI thấy và không trả lại chính từ đó
+                state.used_words.add(norm_content)
                 val = await groq_client.validate_and_next_singleplayer(content, player_last_syllable, state.used_words)
+
+                if val.get("api_error"):
+                    # Lỗi hạ tầng → không tính là thua, mời gửi lại
+                    state.used_words.discard(norm_content)
+                    await message.add_reaction("⚠️")
+                    await message.reply("⚠️ AI đang gặp sự cố kết nối. Vui lòng gửi lại cụm từ sau giây lát!")
+                    rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    return
+
                 if not val["valid"]:
+                    state.used_words.discard(norm_content)
                     await message.add_reaction("❌")
                     await message.reply(f"❌ {message.author.mention} Vui lòng gửi lại từ nối khác! Lý do: {val['reason']}")
-                    state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 
                 # 2nd-layer validation for Player's word in Singleplayer
                 is_real_player = await groq_client.is_real_vietnamese_word(content)
                 if not is_real_player:
+                    state.used_words.discard(norm_content)
                     await message.add_reaction("❌")
                     await message.reply(f"❌ {message.author.mention} Cụm từ **'{content}'** không phải là từ ghép tiếng Việt có thật! Vui lòng chọn từ khác.")
-                    state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
+                    rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 
                 await message.add_reaction("✅")
-                state.used_words.add(norm_content)
                 state.used_words_history.append(f"<@{message.author.id}>: {content}")
 
                 ai_word = val.get("ai_word")
@@ -650,11 +722,24 @@ async def handle_noitu_message(message: discord.Message):
                 # Extra check if AI selected a duplicate despite prompt rules
                 if norm_ai_word in state.used_words:
                     logger.warning(f"AI selected duplicate word '{ai_word}', retrying AI completion once...")
-                    state.used_words.add(norm_ai_word) # temporarily add to force new choice
-                    ai_res_retry = await groq_client.validate_and_next_singleplayer(content, state.last_syllable, state.used_words)
-                    if ai_res_retry.get("valid") and ai_res_retry.get("ai_word"):
+                    # Truyền bản sao có từ trùng để ép AI chọn khác, KHÔNG pollute bộ used thật
+                    ai_res_retry = await groq_client.validate_and_next_singleplayer(
+                        content, player_last_syllable, state.used_words | {norm_ai_word})
+                    if ai_res_retry.get("api_error"):
+                        # Lỗi hạ tầng lúc retry → mời người chơi gửi lại, không kết thúc oan
+                        state.used_words.discard(norm_content)
+                        await message.add_reaction("⚠️")
+                        await message.reply("⚠️ AI đang gặp sự cố kết nối. Vui lòng gửi lại cụm từ sau giây lát!")
+                        rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
+                        return
+                    if ai_res_retry.get("valid") and ai_res_retry.get("ai_word") and normalize_word(ai_res_retry["ai_word"]) not in state.used_words:
                         ai_word = ai_res_retry["ai_word"]
                         norm_ai_word = normalize_word(ai_word)
+                if norm_ai_word in state.used_words:
+                    # Vẫn trùng sau retry → AI thua công bằng (từ trùng không được chấp nhận)
+                    await message.channel.send(f"🎉 **AI KHÔNG NỐI TIẾP ĐƯỢC CỤM TỪ!** {message.author.mention} ĐÃ THẮNG CUỘC!")
+                    await finish_game(message.channel, state, winner_text=f"{message.author.mention}")
+                    return
 
                 state.used_words.add(norm_ai_word)
                 state.used_words_history.append(f"🐭 Chuột dethw: {ai_word}")
@@ -663,7 +748,7 @@ async def handle_noitu_message(message: discord.Message):
 
                 await message.channel.send(f"🐭 **Chuột dethw:** `{ai_word}`")
                 await message.channel.send(f"👉 Tới lượt {message.author.mention}! Cần nối cụm từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
-                state.timer_task = asyncio.create_task(singleplayer_timeout_handler(message.channel, state, message.author.id))
+                rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
 
         # ================= 5B: MULTIPLAYER =================
         else:
@@ -672,7 +757,7 @@ async def handle_noitu_message(message: discord.Message):
                 if not val["valid"]:
                     await message.add_reaction("❌")
                     await message.reply(f"❌ {message.author.mention} Đề không hợp lệ: {val['reason']}. Vui lòng ra đề khác (cụm 2 tiếng)!")
-                    state.timer_task = asyncio.create_task(multiplayer_timeout_handler(message.channel, state, message.author.id))
+                    rearm_timer(state, multiplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 
                 await message.add_reaction("✅")
@@ -687,18 +772,37 @@ async def handle_noitu_message(message: discord.Message):
                 state.current_turn_user_id = next_user_id
 
                 await message.channel.send(f"👉 Tới lượt <@{next_user_id}>! Cần nối bằng từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
-                state.timer_task = asyncio.create_task(multiplayer_timeout_handler(message.channel, state, next_user_id))
+                rearm_timer(state, multiplayer_timeout_handler(message.channel, state, next_user_id))
 
             elif state.status == "PLAYING":
                 val = await groq_client.validate_multiplayer_word(content, state.last_syllable, state.used_words)
-                if not val["valid"]:
+
+                if val.get("api_error"):
+                    # Lỗi hạ tầng → KHÔNG loại người chơi, mời gửi lại
+                    await message.add_reaction("⚠️")
+                    await message.reply("⚠️ Trọng tài đang lag kết nối. Vui lòng gửi lại cụm từ!")
+                    rearm_timer(state, multiplayer_timeout_handler(message.channel, state, message.author.id))
+                    return
+
+                # ⭐ Code-level enforcement: không tin 100% phán quyết của LLM
+                words_chk = [clean_syllable(w) for w in content.strip().split() if clean_syllable(w)]
+                required_chk = clean_syllable(state.last_syllable) if state.last_syllable else None
+                elim_reason = None
+                if len(words_chk) != 2:
+                    elim_reason = "Cụm từ không gồm đúng 2 tiếng"
+                elif required_chk and words_chk[0] != required_chk:
+                    elim_reason = f"Cụm từ phải bắt đầu bằng tiếng '{state.last_syllable}'"
+                elif not val["valid"]:
+                    elim_reason = str(val.get("reason", "Cụm từ không hợp lệ."))
+
+                if elim_reason:
                     await message.add_reaction("❌")
-                    await message.channel.send(f"❌ <@{message.author.id}> nối từ sai ({val['reason']})! <@{message.author.id}> BỊ LOẠI!")
+                    await message.channel.send(f"❌ <@{message.author.id}> nối từ sai ({elim_reason})! <@{message.author.id}> BỊ LOẠI!")
 
                     state.eliminated_players.append({
                         "user_id": message.author.id,
                         "order": len(state.eliminated_players) + 1,
-                        "reason": val["reason"]
+                        "reason": elim_reason
                     })
                     if message.author.id in state.players:
                         state.players.remove(message.author.id)
@@ -713,7 +817,7 @@ async def handle_noitu_message(message: discord.Message):
                         next_user_id = state.players[state.turn_index]
                         state.current_turn_user_id = next_user_id
                         await message.channel.send(f"👉 Tới lượt <@{next_user_id}>! Cần nối bằng từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
-                        state.timer_task = asyncio.create_task(multiplayer_timeout_handler(message.channel, state, next_user_id))
+                        rearm_timer(state, multiplayer_timeout_handler(message.channel, state, next_user_id))
                     return
 
                 await message.add_reaction("✅")
@@ -727,7 +831,7 @@ async def handle_noitu_message(message: discord.Message):
                 state.current_turn_user_id = next_user_id
 
                 await message.channel.send(f"👉 Tới lượt <@{next_user_id}>! Cần nối bằng từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
-                state.timer_task = asyncio.create_task(multiplayer_timeout_handler(message.channel, state, next_user_id))
+                rearm_timer(state, multiplayer_timeout_handler(message.channel, state, next_user_id))
 
 
 async def finish_game(channel: discord.TextChannel, state: NoiTuGameState, winner_text: str):

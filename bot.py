@@ -164,6 +164,71 @@ async def on_member_remove(member):
 
 @bot.event
 async def on_message(message: discord.Message):
+    # ================= BetterAntiDupe Webhook Handler =================
+    # Intercept BetterAntiDupe webhook alerts in the designated channel
+    BAD_CHANNEL_ID = 1540691749754769499
+    if message.channel.id == BAD_CHANNEL_ID and message.webhook_id is not None:
+        # Skip our own bot's messages to avoid loops
+        if message.author.id == bot.user.id:
+            return
+
+        # Log full embed content for debugging structure
+        logger.info(f"[BetterAntiDupe] Webhook message received in #{message.channel.name}")
+        logger.info(f"[BetterAntiDupe] Content: {message.content}")
+        for i, embed in enumerate(message.embeds):
+            logger.info(f"[BetterAntiDupe] Embed[{i}] title={embed.title} | description={embed.description}")
+            logger.info(f"[BetterAntiDupe] Embed[{i}] author={embed.author.name if embed.author else None}")
+            if embed.fields:
+                for field in embed.fields:
+                    logger.info(f"[BetterAntiDupe] Embed[{i}] field: {field.name} = {field.value}")
+
+        # Try to extract player name from embed
+        player_name = None
+        for embed in message.embeds:
+            # Common patterns: title contains player name, or author.name, or a specific field
+            if embed.author and embed.author.name:
+                player_name = embed.author.name
+                break
+            if embed.title:
+                # Try to extract from title like "PlayerName was caught duping"
+                import re as _re
+                match = _re.search(r'([A-Za-z0-9_]{3,16})', embed.title)
+                if match:
+                    player_name = match.group(1)
+                    break
+            if embed.description:
+                import re as _re
+                match = _re.search(r'([A-Za-z0-9_]{3,16})', embed.description)
+                if match:
+                    player_name = match.group(1)
+                    break
+            # Check fields for player name
+            if embed.fields:
+                for field in embed.fields:
+                    if field.name and 'player' in field.name.lower():
+                        player_name = field.value.strip() if field.value else None
+                        if player_name:
+                            break
+                if player_name:
+                    break
+
+        if player_name:
+            try:
+                await message.delete()
+                await message.channel.send(
+                    f"phát hiện 1 cậu bé muốn làm đồ ăn của tui! "
+                    f"Phát hiện người chơi @{player_name} trong mc đã gian lận bằng cách dupe, "
+                    f"đã được cho lên bảng phong thần!"
+                )
+                logger.info(f"[BetterAntiDupe] Replaced webhook alert for player: {player_name}")
+            except discord.HTTPException as e:
+                logger.error(f"[BetterAntiDupe] Failed to delete/send: {e}")
+        else:
+            logger.warning("[BetterAntiDupe] Could not extract player name from embed. Keeping original message.")
+
+        return  # Stop further processing for this message
+
+
     # Ignore own messages or other bot messages
     if message.author == bot.user or message.author.bot:
         return
