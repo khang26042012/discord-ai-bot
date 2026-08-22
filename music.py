@@ -380,7 +380,7 @@ class TrackSelectView(discord.ui.View):
         self.message: Optional[discord.Message] = None
         options = []
         for i, t in enumerate(choices):
-            options.append(discord.ui.SelectOption(
+            options.append(discord.SelectOption(
                 label=f"{i + 1}. {t.title[:95]}",
                 description=f"{t.uploader[:40]} • {_fmt_duration(t.duration)}"[:100],
                 value=str(i),
