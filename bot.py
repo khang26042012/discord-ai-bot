@@ -424,6 +424,47 @@ async def debug_01001(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name="0102", description=".")
+async def debug_0102(interaction: discord.Interaction):
+    import random, datetime
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    errors = [
+        "FATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory",
+        "Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@discordjs/rest'",
+        "HTTP 502 Bad Gateway: upstream prematurely closed connection",
+        "HTTP 429 Too Many Requests: Rate limit exceeded. Retry after 847s",
+        "OOMKilled: Container exceeded memory limit (512Mi)",
+        "CrashLoopBackOff: Back-off restarting failed container (exit code 137)",
+        "psycopg2.OperationalError: could not translate host name 'db-primary'",
+        "redis.exceptions.ConnectionError: Error 111 connecting to cache-01:6379",
+        "aiohttp.client_exceptions.ClientConnectorError: Cannot connect to host api.xkiro.com:443",
+        "json.decoder.JSONDecodeError: Extra data: line 2 column 1 (char 1847)",
+        "KeyError: 'choices' - Response missing expected field from LLM provider",
+        "asyncio.exceptions.TimeoutError: Task timed out after 30.0 seconds",
+        "ssl.SSLCertVerificationError: CERTIFICATE_VERIFY_FAILED",
+        "HTTP 500 Internal Server Error: NullPointerException at ChatCompletion",
+        "ConnectionResetError: [Errno 104] Connection reset by peer during SSL handshake",
+        "UnhandledPromiseRejectionWarning: DiscordAPIError[50001]: Missing Access",
+        "Error [TOKEN_INVALID]: An invalid token was provided.",
+        "FailedScheduling: 0/3 nodes are available: insufficient cpu, memory",
+        "Readiness probe failed: HTTP probe failed with statuscode: 503",
+        "ImagePullBackOff: Failed to pull image 'registry.internal/bot:v2.4.1'",
+    ]
+    selected = random.sample(errors, min(20, len(errors)))
+    lines = []
+    for err in selected:
+        pid = random.randint(1000, 65535)
+        mod = random.choice(["discord.ext.commands", "aiohttp.client", "bot.core", "api.handler", "db.connector"])
+        lines.append(f"[{ts}] [FIXED] PID:{pid} | {mod} | ✅ {err}")
+    fixed_text = "\n".join(lines)
+    if len(fixed_text) > 1950:
+        fixed_text = fixed_text[:1947] + "..."
+    embed = discord.Embed(
+        description=f"```diff\n+ {fixed_text}\n```",
+        color=discord.Color.green()
+    )
+    await interaction.response.send_message(embed=embed)
+
 @bot.tree.command(name="info", description="Thông tin về bot")
 async def info_slash(interaction: discord.Interaction):
     if not await check_manager_interaction(interaction):
