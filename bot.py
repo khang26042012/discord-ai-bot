@@ -92,6 +92,10 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
+# ================= Music Module (voice nhạc) =================
+import music as music_module
+music_module.setup(bot)
+
 # ================= MongoDB Connection =================
 MONGODB_URI = os.getenv("MONGODB_URI")
 if not MONGODB_URI:
@@ -134,6 +138,14 @@ async def on_ready():
     if await init_mongodb():
         # Migrate data from JSON if needed
         await migrate_json_to_mongodb()
+        music_module.bind_db(db)
+    
+    # Khởi động hệ thống nhạc (watcher tự ngắt khi room trống / idle)
+    try:
+        music_module.ensure_started()
+        logger.info("✅ Music system ready (/play, /radio, playlists)")
+    except Exception as e:
+        logger.error(f"Failed to start music system: {e}")
     
     # Sync slash commands
     try:
