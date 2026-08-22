@@ -61,6 +61,14 @@ _cookie_file = os.getenv("YT_COOKIES_FILE")
 if _cookie_file and os.path.exists(_cookie_file):
     YTDL_OPTS_BASE["cookiefile"] = _cookie_file
 
+# Bo sinh PO token bgutil (script mode) - khien link googlevideo khong bi 403
+_BGUTIL_SCRIPT = "/opt/bgutil/server/build/generate_once.js"
+if os.path.exists(_BGUTIL_SCRIPT):
+    YTDL_OPTS_BASE["extractor_args"] = {"youtube": {"getpot_script": [_BGUTIL_SCRIPT]}}
+    logger.info(f"✅ Sẽ dùng bgutil PO token provider: {_BGUTIL_SCRIPT}")
+else:
+    logger.info("Không thấy bgutil script - phát nhạc không có PO token (có thể bị 403)")
+
 # Cookies truyen qua env var (base64) - an toan tren Railway, khong luu file trong git
 _cookie_b64 = os.getenv("YT_COOKIES_B64")
 if _cookie_b64:
