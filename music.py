@@ -18,6 +18,8 @@ Nguon nhac: YouTube/SoundCloud qua yt-dlp + radio SomaFM/Nightride (khong QC).
 
 import os
 import time
+import base64
+import tempfile
 import asyncio
 import logging
 from collections import deque
@@ -47,12 +49,29 @@ YTDL_OPTS_BASE: Dict[str, Any] = {
     "socket_timeout": 15,
     "retries": 3,
     "source_address": "0.0.0.0",
-    # Chong YouTube chan bot-check: uu tien client android/web
-    "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
 }
+# Chong YouTube chan "confirm you're not a bot":
+# thu lan luot cac bo player_client den khi nao thanh cong
+YT_CLIENT_FALLBACKS = [
+    ["tv", "ios"],                    # thuong khong can PO token
+    ["tv_embedded", "android_vr"],    # phuong an 2
+    ["android", "web"],               # cuoi cung
+]
 _cookie_file = os.getenv("YT_COOKIES_FILE")
 if _cookie_file and os.path.exists(_cookie_file):
     YTDL_OPTS_BASE["cookiefile"] = _cookie_file
+
+# Cookies truyen qua env var (base64) - an toan tren Railway, khong luu file trong git
+_cookie_b64 = os.getenv("YT_COOKIES_B64")
+if _cookie_b64:
+    try:
+        _cookie_path = os.path.join(tempfile.gettempdir(), "yt_cookies.txt")
+        with open(_cookie_path, "wb") as f:
+            f.write(base64.b64decode(_cookie_b64))
+        YTDL_OPTS_BASE["cookiefile"] = _cookie_path
+        logger.info("✅ Đã nạp YouTube cookies từ biến môi trường YT_COOKIES_B64")
+    except Exception as e:
+        logger.warning(f"Không giải mã được YT_COOKIES_B64: {e}")
 
 FFMPEG_OPTS = {
     # Tu noi lai stream khi mang chap chon
@@ -143,19 +162,51 @@ def _can_moderate(interaction: discord.Interaction) -> bool:
 
 # ================= YT-DLP HELPERS =================
 
-def _sync_extract(query: str, search: bool = False):
-    """Chay blocking yt-dlp trong executor."""
+def _sync_extract(query: str, search: bool = False, clients=None):
+    """Chay blocking yt-dlp trong executor (voi bo player_client chi dinh)."""
     opts = dict(YTDL_OPTS_BASE)
     if search:
         opts["default_search"] = f"ytsearch{SEARCH_RESULTS}"
+    if clients:
+        opts["extractor_args"] = {"youtube": {"player_client": clients}}
     ydl = yt_dlp.YoutubeDL(opts)
     return ydl.extract_info(query, download=False)
 
 
+def _is_bot_check(err_text: str) -> bool:
+    t = err_text.lower()
+    return ("sign in to confirm" in t or "not a bot" in t
+            or "cookies" in t and "youtube" in t)
+
+
+async def _extract_with_fallback(query: str, search: bool = False):
+    """
+    Extract voi chuoi player_client du phong.
+    Khi YouTube chan 'Sign in to confirm you're not a bot' -> tu doi client khac.
+    """
+    last_err: Optional[Exception] = None
+    for i, clients in enumerate(YT_CLIENT_FALLBACKS):
+        try:
+            # chay trong executor de khong block event loop
+            data = await asyncio.get_event_loop().run_in_executor(
+                None, lambda q=query, c=clients, s=search: _sync_extract(q, s, c))
+            if data is not None and (not search or data.get("entries")):
+                if i > 0:
+                    logger.info(f"[Music] Client set #{i + 1} ({clients}) hoat dong")
+                return data
+            last_err = last_err or RuntimeError("Khong co ket qua")
+        except Exception as e:
+            last_err = e
+            if _is_bot_check(str(e)):
+                logger.warning(f"[Music] YouTube chan client {clients} -> thu bo tiep theo...")
+                continue
+            raise  # loi khac (URL sai...) -> bao ngay
+    raise last_err
+
+
 async def _resolve_search(query: str):
     """Tra ve toi da 5 ket qua tho cho o tim kiem."""
-    data = await asyncio.get_event_loop().run_in_executor(
-        None, lambda: _sync_extract(query, search=True))
+    data = await _extract_with_fallback(query, search=True)
     if data is None:
         return []
     entries = data.get("entries") or []
@@ -183,8 +234,7 @@ async def _ensure_stream_url(track: Track):
     """Resolve URL am thanh truc tiep neu chua co (luoi hoa de nhanh & nhe RAM)."""
     if track.stream_url or track.is_stream or yt_dlp is None:
         return
-    data = await asyncio.get_event_loop().run_in_executor(
-        None, lambda: _sync_extract(track.webpage_url))
+    data = await _extract_with_fallback(track.webpage_url)
     if data:
         track.stream_url = data.get("url")
         if not track.duration:
@@ -433,8 +483,7 @@ def setup(bot: commands.Bot):
         is_url = any(query.startswith(p) for p in URL_PREFIXES)
         try:
             if is_url:
-                data = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _sync_extract(query))
+                data = await _extract_with_fallback(query)
                 if not data:
                     return await interaction.followup.send("❌ Không đọc được URL này.")
                 track = _entry_to_track(data, interaction.user.id)
@@ -478,7 +527,12 @@ def setup(bot: commands.Bot):
                             f"✅ Đã thêm **{view.chosen.title[:60]}** vào hàng đợi (vị trí #{pos}).")
         except Exception as e:
             logger.error(f"[Music] /play loi: {e}")
-            await interaction.followup.send(f"❌ Lỗi khi xử lý yêu cầu: `{str(e)[:150]}`")
+            if _is_bot_check(str(e)):
+                await interaction.followup.send(
+                    "🤖 YouTube đang chặn bot-check từ server! Admin cần cung cấp cookies "
+                    "(env YT_COOKIES_FILE) để vượt qua. Thử `/radio` trong lúc chờ nhé!")
+            else:
+                await interaction.followup.send(f"❌ Lỗi khi xử lý yêu cầu: `{str(e)[:150]}`")
 
     # ---------------- Dieu khien co ban ----------------
     @bot.tree.command(name="pause", description="⏸️ Tạm dừng bản nhạc hiện tại")
@@ -666,8 +720,7 @@ def setup(bot: commands.Bot):
         if bai_moi:
             is_url = any(bai_moi.startswith(p) for p in URL_PREFIXES)
             try:
-                data = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: _sync_extract(bai_moi, search=not is_url))
+                data = await _extract_with_fallback(bai_moi, search=not is_url)
                 entry = data if is_url else next(iter([e for e in (data.get("entries") or []) if e]), None)
                 if not entry:
                     return await interaction.followup.send("😢 Không tìm thấy bài đó.")
