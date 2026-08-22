@@ -142,7 +142,7 @@ async def on_ready():
     
     # Khởi động hệ thống nhạc (watcher tự ngắt khi room trống / idle)
     try:
-        music_module.ensure_started()
+        asyncio.create_task(music_module.ensure_started())
         logger.info("✅ Music system ready (/play, /radio, playlists)")
     except Exception as e:
         logger.error(f"Failed to start music system: {e}")
