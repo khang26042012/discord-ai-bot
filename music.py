@@ -498,8 +498,8 @@ def setup(bot: commands.Bot):
                 "🤔 Bạn cần vào một kênh thoại trước đã!", ephemeral=True)
         await interaction.response.defer()
 
-        # tim kiem qua node
-        identifier = query if query.startswith("http") else f"ytsearch{SEARCH_RESULTS}:{query}"
+        # tim kiem qua node (Lavalink chi hieu "ytsearch:" / "scsearch:" khong co so)
+        identifier = query if query.startswith("http") else f"ytsearch:{query}"
         if "soundcloud.com" in query:
             identifier = query
         try:
@@ -508,7 +508,7 @@ def setup(bot: commands.Bot):
             return await interaction.followup.send(f"❌ Lỗi khi tìm nhạc: `{str(e)[:120]}`")
         if not tracks and not query.startswith("http"):
             try:
-                tracks = await _load_tracks(f"scsearch{SEARCH_RESULTS}:{query}")
+                tracks = await _load_tracks(f"scsearch:{query}")
             except Exception:
                 tracks = []
         if not tracks:
@@ -730,7 +730,7 @@ def setup(bot: commands.Bot):
         if bai_moi:
             if not _lav_session_id:
                 return await interaction.response.send_message("⏳ Node chưa sẵn sàng!", ephemeral=True)
-            trs = await _load_tracks(bai_moi if bai_moi.startswith("http") else f"ytsearch1:{bai_moi}")
+            trs = await _load_tracks(bai_moi if bai_moi.startswith("http") else "ytsearch:" + bai_moi)
             if trs:
                 doc["tracks"].append({"title": trs[0]["info"]["title"],
                                       "identifier": trs[0]["info"]["identifier"],
@@ -752,7 +752,7 @@ def setup(bot: commands.Bot):
             return await interaction.response.send_message(f"❓ Không tìm thấy playlist `{ten}`.", ephemeral=True)
         if not _lav_session_id:
             return await interaction.response.send_message("⏳ Node chưa sẵn sàng!", ephemeral=True)
-        trs = await _load_tracks(bai_moi if bai_moi.startswith("http") else f"ytsearch1:{bai_moi}")
+        trs = await _load_tracks(bai_moi if bai_moi.startswith("http") else "ytsearch:" + bai_moi)
         if not trs:
             return await interaction.response.send_message("😢 Không tìm thấy bài đó.", ephemeral=True)
         info = trs[0]["info"]
