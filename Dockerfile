@@ -10,11 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Bộ sinh PO token bgutil — chạy chế độ script, giúp link googlevideo không bị 403
-RUN git clone --depth 1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil \
-    && cd /opt/bgutil/server \
-    && npm install --no-audit --no-fund \
-    && npm run build
+# Bộ sinh PO token bgutil - clone về HOME để plugin tự nhận diện (script mode)
+# Build: npm ci + npx tsc -> tạo server/build/generate_once.js
+RUN git clone --single-branch --depth 1 --branch 1.3.2 \
+        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /root/bgutil-ytdlp-pot-provider \
+    && cd /root/bgutil-ytdlp-pot-provider/server \
+    && npm ci --no-audit --no-fund \
+    && npx tsc
 
 COPY . .
 
