@@ -74,6 +74,7 @@ class GuildPlayer:
         self.voice_token: Optional[str] = None
         self.voice_endpoint: Optional[str] = None
         self.voice_session: Optional[str] = None
+        self.voice_channel_id: Optional[int] = None   # Lavalink v4 bat buoc channelId
 
 
 _guild_players: Dict[int, GuildPlayer] = {}
@@ -148,9 +149,11 @@ def _is_busy(gp: Optional[GuildPlayer]) -> bool:
 
 
 def _voice_block(gp: GuildPlayer) -> Optional[Dict[str, str]]:
-    if gp.voice_token and gp.voice_endpoint and gp.voice_session:
+    if (gp.voice_token and gp.voice_endpoint and gp.voice_session
+            and gp.voice_channel_id):
         return {"token": gp.voice_token, "endpoint": gp.voice_endpoint,
-                "sessionId": gp.voice_session}
+                "sessionId": gp.voice_session,
+                "channelId": str(gp.voice_channel_id)}
     return None
 
 
@@ -277,6 +280,7 @@ async def _ensure_voice(interaction: discord.Interaction) -> Optional[discord.Vo
         await vc.move_to(ch, self_deaf=True)
     gp = _gp(interaction.guild_id)
     gp.text_channel_id = interaction.channel_id
+    gp.voice_channel_id = ch.id
     gp.last_active = time.time()
     return vc
 
@@ -359,6 +363,9 @@ async def on_socket_response(data: Dict):
             sid = d.get("session_id")
             if sid:
                 gp.voice_session = sid
+            cid = d.get("channel_id")
+            if cid:
+                gp.voice_channel_id = int(cid)
 
 
 # ================= WATCHER (auto-stop khi trong/idle) =================
