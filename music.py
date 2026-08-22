@@ -32,7 +32,7 @@ LAV_HOST = os.getenv("LAVALINK_HOST", "nvnmc.asia")
 LAV_PORT = int(os.getenv("LAVALINK_PORT", "26014"))
 LAV_PASSWORD = os.getenv("LAVALINK_PASSWORD", "")
 LAV_REST = f"http://{LAV_HOST}:{LAV_PORT}/v4"
-LAV_WS = f"ws://{LAV_HOST}:{LAV_PORT}"
+LAV_WS = f"ws://{LAV_HOST}:{LAV_PORT}/v4/websocket"
 
 SEARCH_RESULTS = 5
 ALONE_TIMEOUT_SEC = 60      # out het nguoi 1 phut -> tu stop
