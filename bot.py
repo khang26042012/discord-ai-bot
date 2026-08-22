@@ -3,6 +3,7 @@ import sys
 import logging
 import re
 import json
+import asyncio
 import aiohttp
 import discord
 from discord import app_commands
