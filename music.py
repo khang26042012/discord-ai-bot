@@ -54,12 +54,21 @@ YTDL_OPTS_BASE: Dict[str, Any] = {
 # thu lan luot cac bo player_client den khi nao thanh cong
 YT_CLIENT_FALLBACKS = [
     ["tv", "ios"],                    # thuong khong can PO token
+    ["tv_simply"],                    # client moi it bi chan
     ["tv_embedded", "android_vr"],    # phuong an 2
     ["android", "web"],               # cuoi cung
 ]
 _cookie_file = os.getenv("YT_COOKIES_FILE")
 if _cookie_file and os.path.exists(_cookie_file):
     YTDL_OPTS_BASE["cookiefile"] = _cookie_file
+
+# Chi ro duong dan bgutil provider cho plugin (neu co)
+_BGUTIL_HOME = os.path.join(os.path.expanduser("~"), "bgutil-ytdlp-pot-provider", "server")
+if os.path.exists(os.path.join(_BGUTIL_HOME, "build", "generate_once.js")):
+    YTDL_OPTS_BASE["extractor_args"] = {
+        "youtube": {},
+        "youtubepot-bgutilscript": {"server_home": [_BGUTIL_HOME]},
+    }
 
 # Bo sinh PO token bgutil (script mode) - khien link googlevideo khong bi 403.
 # Plugin tu nhan dien khi repo nam tai ~/bgutil-ytdlp-pot-provider (mac dinh cua no).
@@ -171,15 +180,18 @@ def _can_moderate(interaction: discord.Interaction) -> bool:
 
 # ================= YT-DLP HELPERS =================
 
-def _sync_extract(query: str, search: bool = False, clients=None, use_cookies: bool = True):
+def _sync_extract(query: str, search: bool = False, clients=None, use_cookies: bool = True,
+                  engine: str = "yt"):
     """Chay blocking yt-dlp trong executor (client + cookies tuy chon tung lan thu)."""
     opts = dict(YTDL_OPTS_BASE)
     if not use_cookies:
         opts.pop("cookiefile", None)   # bo cookies cho client noman
     if search:
-        opts["default_search"] = f"ytsearch{SEARCH_RESULTS}"
+        opts["default_search"] = f"{engine}search{SEARCH_RESULTS}"
     if clients:
-        opts["extractor_args"] = {"youtube": {"player_client": clients}}
+        ea = dict(opts.get("extractor_args") or {})
+        ea["youtube"] = {"player_client": clients}
+        opts["extractor_args"] = ea
     ydl = yt_dlp.YoutubeDL(opts)
     return ydl.extract_info(query, download=False)
 
@@ -246,6 +258,24 @@ async def _extract_with_fallback(query: str, search: bool = False):
 async def _resolve_search(query: str):
     """Tra ve toi da 5 ket qua tho cho o tim kiem."""
     data = await _extract_with_fallback(query, search=True)
+    if data is None:
+        return []
+    entries = data.get("entries") or []
+    return [e for e in entries if e][:SEARCH_RESULTS]
+
+
+def _sync_extract_sc(query: str):
+    """Tim kiem tren SoundCloud (on dinh, khong PO token)."""
+    opts = dict(YTDL_OPTS_BASE)
+    opts["default_search"] = f"scsearch{SEARCH_RESULTS}"
+    ydl = yt_dlp.YoutubeDL(opts)
+    return ydl.extract_info(f"scsearch{SEARCH_RESULTS}:{query}", download=False)
+
+
+async def _resolve_search_sc(query: str):
+    """Tim kiem SoundCloud - phuong an du phong khi YouTube khong cooperate."""
+    data = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: _sync_extract_sc(query))
     if data is None:
         return []
     entries = data.get("entries") or []
@@ -537,9 +567,19 @@ def setup(bot: commands.Bot):
                             color=discord.Color.blue()))
             else:
                 await interaction.followup.send(f"🔍 Đang tìm `{query}` trên YouTube...")
-                raw = await _resolve_search(query)
+                try:
+                    raw = await _resolve_search(query)
+                    source_name = "YouTube"
+                except Exception as yt_err:
+                    # YouTube khó tính -> chuyển qua SoundCloud tự động
+                    logger.warning(f"[Music] YouTube search fail ({str(yt_err)[:80]}...) -> fallback SoundCloud")
+                    await interaction.followup.send(
+                        "😕 YouTube đang khó tính với server... thử tìm trên **SoundCloud** nhé!")
+                    raw = await _resolve_search_sc(query)
+                    source_name = "SoundCloud"
                 if not raw:
-                    return await interaction.followup.send(f"😢 Không tìm thấy kết quả nào cho `{query}`.")
+                    return await interaction.followup.send(
+                        f"😢 Không tìm thấy kết quả nào cho `{query}` (đã thử cả YouTube & SoundCloud).")
                 choices = [_entry_to_track(e, interaction.user.id) for e in raw]
 
                 lines = "\n".join(
@@ -547,7 +587,7 @@ def setup(bot: commands.Bot):
                     f"↳ {t.uploader[:50]} • {_fmt_duration(t.duration)}"
                     for i, t in enumerate(choices))
                 embed = discord.Embed(
-                    title="🔎 Kết quả tìm kiếm",
+                    title=f"🔎 Kết quả tìm kiếm ({source_name})",
                     description=lines,
                     color=discord.Color.gold())
                 embed.set_footer(text="Chọn bài bên dưới ⬇️ hoặc đợi 90s để huỷ")
