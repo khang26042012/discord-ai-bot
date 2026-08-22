@@ -173,19 +173,35 @@ def _sync_extract(query: str, search: bool = False, clients=None):
     return ydl.extract_info(query, download=False)
 
 
-def _is_bot_check(err_text: str) -> bool:
+def _is_retryable(err_text: str) -> bool:
+    """Loi nen thu client khac (bot-check, trang stale...)."""
     t = err_text.lower()
     return ("sign in to confirm" in t or "not a bot" in t
-            or "cookies" in t and "youtube" in t)
+            or ("cookies" in t and "youtube" in t)
+            or "page needs to be reloaded" in t
+            or "request got redirected" in t)
+
+
+def _is_bot_check(err_text: str) -> bool:
+    """Giu ten cu de tuong thich noi dung bao loi."""
+    return _is_retryable(err_text)
+
+
+def _client_chain():
+    """Thu tu thu client: co cookies -> uu tien android/web truoc (da dang nhap)."""
+    if "cookiefile" in YTDL_OPTS_BASE:
+        return [["android", "web"], ["tv", "ios"], ["tv_embedded", "android_vr"]]
+    return YT_CLIENT_FALLBACKS
 
 
 async def _extract_with_fallback(query: str, search: bool = False):
     """
     Extract voi chuoi player_client du phong.
-    Khi YouTube chan 'Sign in to confirm you're not a bot' -> tu doi client khac.
+    Gap bot-check / stale page -> tu doi client khac den khi thanh cong.
     """
     last_err: Optional[Exception] = None
-    for i, clients in enumerate(YT_CLIENT_FALLBACKS):
+    chain = _client_chain()
+    for i, clients in enumerate(chain):
         try:
             # chay trong executor de khong block event loop
             data = await asyncio.get_event_loop().run_in_executor(
@@ -197,8 +213,8 @@ async def _extract_with_fallback(query: str, search: bool = False):
             last_err = last_err or RuntimeError("Khong co ket qua")
         except Exception as e:
             last_err = e
-            if _is_bot_check(str(e)):
-                logger.warning(f"[Music] YouTube chan client {clients} -> thu bo tiep theo...")
+            if _is_retryable(str(e)):
+                logger.warning(f"[Music] Client {clients} bi tu choi ({str(e)[:60]}...) -> thu bo tiep theo...")
                 continue
             raise  # loi khac (URL sai...) -> bao ngay
     raise last_err
