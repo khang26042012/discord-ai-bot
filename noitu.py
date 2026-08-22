@@ -202,6 +202,7 @@ Nhiệm vụ của bạn:
 ⛔ CẤM BỊA TỪ VÀ CẤM SAI TIẾNG ĐẦU:
 - TIẾNG ĐẦU TIÊN của cụm từ bạn chọn BẮT BUỘC KHỚP VỚI '{clean_exp_first}'. Ví dụ: nếu yêu cầu bắt đầu bằng 'lắm', cụm từ của bạn PHẢI là 'lắm chuyện', 'lắm lời' (BẮT ĐẦU BẰNG 'lắm'). CẤM không được chọn 'đẹp trai' khi yêu cầu là 'lắm'!
 - TUYỆT ĐỐI CẤM ghép 2 tiếng ngẫu nhiên vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
+- ⛔ CẤM đảo ngược từ vừa được đưa ra (ví dụ: nếu người chơi nói 'khổ đau', CẤM trả lời 'đau khổ').
 - ⛔ CHỈ ĐƯỢC DÙNG TIẾNG VIỆT. TUYỆT ĐỐI KHÔNG dùng từ tiếng Anh hay ngôn ngữ khác.
 - Nếu không tìm thấy cụm từ hợp lệ bắt đầu bằng '{clean_exp_first}', bạn PHẢI CHẤP NHẬN THUA bằng cách trả về valid: false.
 
@@ -226,6 +227,7 @@ NHIỆM VỤ CỦA BẠN:
 3. ⭐ ƯU TIÊN TUYỆT ĐỐI từ THÔNG DỤNG, DỄ HIỂU, ai cũng biết (ví dụ: 'con mèo', 'ăn cơm', 'đi học', 'vui vẻ'). CHỈ khi HẾT từ dễ mới dùng từ khó/hiếm.
 4. Bạn có vốn từ vựng phong phú, hãy tự tin chọn từ phù hợp! Đừng ngại đưa ra từ hay.
 5. TUYỆT ĐỐI CẤM ghép bừa vô nghĩa (CẤM 'khoải hứng', 'nhung nhau').
+7. ⛔ CẤM đảo ngược từ vừa được đưa ra (ví dụ: 'khổ đau' → CẤM 'đau khổ', 'yêu thương' → CẤM 'thương yêu').
 6. ⛔ CHỈ ĐƯỢC DÙNG TIẾNG VIỆT. TUYỆT ĐỐI KHÔNG dùng từ tiếng Anh hay ngôn ngữ khác (CẤM 'people', 'hello', 'world'...).
 6. Nếu thực sự không tìm được từ nào bắt đầu bằng '{clean_exp_first}', trả về valid: false để chịu thua.
 
@@ -254,6 +256,14 @@ Trả về duy nhất JSON:
                 if len(ai_words) != 2 or ai_words[0] != clean_exp_first:
                     logger.warning(f"AI returned word '{ai_word}' which does NOT start with required syllable '{clean_exp_first}'. Rejecting!")
                     return {"valid": False, "reason": f"AI đưa ra cụm từ '{ai_word}' không bắt đầu bằng tiếng '{clean_exp_first}'."}
+
+                # Check for reversed word (e.g., "khổ đau" → "đau khổ")
+                player_words = [clean_syllable(w) for w in current_word.strip().split() if clean_syllable(w)]
+                ai_words_list = [clean_syllable(w) for w in ai_word.strip().split() if clean_syllable(w)]
+                if len(player_words) == 2 and len(ai_words_list) == 2:
+                    if ai_words_list[0] == player_words[1] and ai_words_list[1] == player_words[0]:
+                        logger.warning(f"AI returned reversed word '{ai_word}' of player's '{current_word}'. Rejecting!")
+                        return {"valid": False, "reason": f"AI không được đảo ngược từ '{current_word}' thành '{ai_word}'."}
 
                 # 2nd-layer validation for AI word
                 is_real = await self.is_real_vietnamese_word(ai_word)
