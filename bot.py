@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import motor.motor_asyncio
 from noitu import start_noitu_game, handle_noitu_message
+import yaml
 
 # Setup logging
 logging.basicConfig(
@@ -41,6 +42,60 @@ ROUTER_MODEL = os.getenv("ROUTER_MODEL", "openrouter/nvidia/nemotron-3.5-lightni
 XKIRO_API_KEY = ROUTER_API_KEY
 XKIRO_BASE_URL = ROUTER_BASE_URL
 XKIRO_MODEL = ROUTER_MODEL
+
+
+# ================= Knowledge Base =================
+KNOWLEDGE_BASE = []
+try:
+    _kb_path = os.path.join(os.path.dirname(__file__), "knowledge.yml")
+    with open(_kb_path, "r", encoding="utf-8") as _kb_file:
+        _kb_data = yaml.safe_load(_kb_file)
+        KNOWLEDGE_BASE = _kb_data.get("topics", []) if _kb_data else []
+    logger.info(f"Loaded {len(KNOWLEDGE_BASE)} knowledge topics from knowledge.yml")
+except Exception as e:
+    logger.warning(f"Failed to load knowledge.yml: {e}")
+
+def search_knowledge(query: str, max_results: int = 3) -> str:
+    """Search knowledge base for relevant topics based on query keywords."""
+    if not KNOWLEDGE_BASE or not query:
+        return ""
+    
+    query_lower = query.lower()
+    scored = []
+    
+    for topic in KNOWLEDGE_BASE:
+        score = 0
+        aliases = topic.get("aliases", [])
+        title = topic.get("title", "")
+        
+        # Check alias matches
+        for alias in aliases:
+            if alias.lower() in query_lower:
+                score += 2
+        
+        # Check title word matches
+        for word in title.lower().split():
+            if len(word) > 2 and word in query_lower:
+                score += 1
+        
+        if score > 0:
+            scored.append((score, topic))
+    
+    # Sort by score descending, take top results
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_topics = [t[1] for t in scored[:max_results]]
+    
+    if not top_topics:
+        return ""
+    
+    # Format as context string
+    context_parts = []
+    for topic in top_topics:
+        title = topic.get("title", "Unknown")
+        content = topic.get("content", "").strip()
+        context_parts.append(f"### {title}\n{content}")
+    
+    return "\n\n".join(context_parts)
 
 # ================= Permission Management =================
 # Yêu cầu Manage Guild hoặc Administrator cho tất cả lệnh
@@ -252,8 +307,8 @@ async def on_message(message: discord.Message):
             response = await ai_client.chat.completions.create(
                 model=XKIRO_MODEL,
                 max_tokens=1800,
-                messages=[
-                    {"role": "system", "content": """# Role: PikaMC Support Assistant
+                messages=(lambda _kb_ctx: [
+                    {"role": "system", "content": f"""# Role: PikaMC Support Assistant
 
 ## Profile
 - **Language**: Tiếng Việt  
@@ -285,9 +340,13 @@ async def on_message(message: discord.Message):
    - **TUYỆT ĐỐI KHÔNG** mặc định trả lời bằng câu chào giới thiệu như "Chào bạn! Mình là trợ lý..." trừ khi người dùng thực sự chào hỏi trước.
    - Trả lời **trực tiếp vào nội dung tin nhắn** của người dùng, không lặp lại lời giới thiệu.
    - Nếu người dùng nói chuyện bình thường, hãy trò chuyện tự nhiên như một người bạn.
-   - Chỉ cung cấp thông tin server khi được hỏi cụ thể."""},
+   - Chỉ cung cấp thông tin server khi được hỏi cụ thể.
+
+## KIẾN THỨC THAM KHẢO (từ knowledge.yml):
+{_kb_ctx if _kb_ctx else "(Không có kiến thức phù hợp với câu hỏi này)"}
+"""},
                     {"role": "user", "content": f"[Người gửi: {message.author.name}]\n{message.content}"},
-                ],
+                ])(search_knowledge(message.content)),
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
             )
             ai_reply = response.choices[0].message.content or ""
