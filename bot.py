@@ -303,6 +303,31 @@ async def on_message(message: discord.Message):
     if ALLOWED_CHANNEL_ID is not None and message.channel.id != ALLOWED_CHANNEL_ID:
         return
 
+    # === ATTACHMENT FILTERING: Only allow images + text, block other files ===
+    ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+    image_attachments = []
+    blocked_files = []
+    
+    for att in message.attachments:
+        if att.content_type and att.content_type.startswith("image/"):
+            image_attachments.append(att)
+        else:
+            blocked_files.append(att.filename)
+    
+    # Notify user about blocked files
+    if blocked_files:
+        await message.reply(
+            f"⚠️ Mình chỉ nhận được **ảnh** và **text** thôi nha! "
+            f"Các file sau đã bị bỏ qua: {', '.join(blocked_files)} 🐭"
+        )
+    
+    # Skip if no text AND no images (nothing to process)
+    has_text = bool(message.content.strip())
+    has_images = len(image_attachments) > 0
+    
+    if not has_text and not has_images:
+        return
+
     # Process standard prefix commands if message starts with prefix
     if message.content.startswith(bot.command_prefix):
         await bot.process_commands(message)
@@ -355,10 +380,19 @@ async def on_message(message: discord.Message):
    - Nếu người dùng nói chuyện bình thường, hãy trò chuyện tự nhiên như một người bạn.
    - Chỉ cung cấp thông tin server khi được hỏi cụ thể.
 
+7. **XỬ LÝ ẢNH / SCREENSHOT LỖI**:
+   - Khi người dùng gửi kèm ảnh (screenshot lỗi Minecraft, màn hình crash, v.v.), hãy **phân tích ảnh** để xác định vấn đề.
+   - Mô tả những gì bạn thấy trong ảnh và đưa ra gợi ý khắc phục dựa trên kiến thức có sẵn.
+   - Nếu ảnh chứa thông báo lỗi rõ ràng, trích xuất nội dung lỗi và giải thích nguyên nhân.
+   - Nếu không thể xác định vấn đề từ ảnh, hãy nói rõ và gợi ý liên hệ admin.
+
 ## KIẾN THỨC THAM KHẢO (từ knowledge.yml):
 {_kb_ctx if _kb_ctx else "(Không tìm thấy kiến thức phù hợp với câu hỏi này. Hãy trả lời rằng bạn chưa có thông tin và gợi ý liên hệ admin.)"}
 """},
-                    {"role": "user", "content": f"[Người gửi: {message.author.name}]\n{message.content}"},
+                    {"role": "user", "content": (lambda _imgs: (
+                        [{"type": "text", "text": f"[Người gửi: {message.author.name}]\n{message.content}"}] +
+                        [{"type": "image_url", "image_url": {"url": img.url}} for img in _imgs]
+                    ) if _imgs else f"[Người gửi: {message.author.name}]\n{message.content}")(image_attachments)},
                 ])(search_knowledge(message.content)),
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
             )
