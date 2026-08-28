@@ -248,9 +248,7 @@ async def on_message(message: discord.Message):
 
     # Only respond when bot is mentioned or replied to (prevent spam)
     bot_mentioned = bot.user in message.mentions
-    is_reply_to_bot = message.reference and message.reference.message_id and await (lambda: True if (await message.channel.fetch_message(message.reference.message_id)).author == bot.user else False)() if message.reference else False
-    
-    # Simplified check: mention or reply
+    is_reply_to_bot = False
     try:
         is_reply_to_bot = False
         if message.reference and message.reference.message_id:
