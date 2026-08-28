@@ -291,6 +291,7 @@ async def on_message(message: discord.Message):
    - Trả lời **trực tiếp vào nội dung tin nhắn** của người dùng, không lặp lại lời giới thiệu.
    - Nếu người dùng nói chuyện bình thường, hãy trò chuyện tự nhiên như một người bạn.
    - Chỉ cung cấp thông tin server khi được hỏi cụ thể."""},
+                    {"role": "user", "content": f"[Người gửi: {message.author.name}]\n{message.content}"},
                 ],
                 extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
             )
