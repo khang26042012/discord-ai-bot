@@ -9,7 +9,7 @@ topics:
       - server
       - thông tin server
       - giới thiệu
-      - khangsmp
+      - server minecraft
       - ip
       - địa chỉ server
       - java
@@ -22,10 +22,10 @@ topics:
       - chủ server
       - bảo trì
 
-    title: Thông tin chung về KhangSMP
+    title: Thông tin chung về Server
 
     content: |
-      Tên server: KhangSMP
+      Tên server: (chưa công bố)
 
       Địa chỉ IP (Java & Bedrock):
       secrets
