@@ -246,7 +246,23 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    # Call Xkiro AI API for any text message in the allowed channel
+    # Only respond when bot is mentioned or replied to (prevent spam)
+    bot_mentioned = bot.user in message.mentions
+    is_reply_to_bot = message.reference and message.reference.message_id and await (lambda: True if (await message.channel.fetch_message(message.reference.message_id)).author == bot.user else False)() if message.reference else False
+    
+    # Simplified check: mention or reply
+    try:
+        is_reply_to_bot = False
+        if message.reference and message.reference.message_id:
+            ref_msg = await message.channel.fetch_message(message.reference.message_id)
+            is_reply_to_bot = ref_msg.author == bot.user
+    except Exception:
+        pass
+    
+    if not bot_mentioned and not is_reply_to_bot:
+        return  # Don't respond to random messages
+    
+    # Call Xkiro AI API
     async with message.channel.typing():
         try:
             response = await ai_client.chat.completions.create(
