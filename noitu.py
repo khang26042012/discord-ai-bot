@@ -12,11 +12,10 @@ from typing import Dict, List, Optional, Set, Any
 
 logger = logging.getLogger("NoiTuGame")
 
-# Environment variables - Compatible with both Groq and 9router
-# Set these env vars: NINEROUTER_API_KEY, AI_BASE_URL, AI_MODEL
-AI_MODEL = os.getenv("AI_MODEL", "qwen/qwen3.7-max")
-AI_API_KEY = os.getenv("NINEROUTER_API_KEY", os.getenv("AI_API_KEY", "sk-edf12b35e2ae5e24-2skod2-7d143f29"))
-AI_BASE_URL = os.getenv("AI_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
+# Environment variables - Shared with bot.py via ROUTER_* vars
+AI_MODEL = os.getenv("ROUTER_MODEL", "openrouter/nvidia/nemotron-3.5-lightning:free")
+AI_API_KEY = os.getenv("ROUTER_API_KEY", "")
+AI_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://api.xkiro.com/v1")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
 NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else None
 
@@ -54,7 +53,7 @@ class AIClient:
                 logger.info(f"Sending Groq API Request (Attempt {attempt+1}/{retries+1}) | Model: {self.model}")
                 logger.debug(f"Groq Messages: {json.dumps(messages, ensure_ascii=False)}")
                 async with aiohttp.ClientSession() as session:
-                    async with session.post(self.base_url, headers=headers, json=data, timeout=12) as resp:
+                    async with session.post(self.base_url, headers=headers, json=data, timeout=45) as resp:
                         raw_text = await resp.text()
                         logger.info(f"Groq API Response Status: {resp.status} | Raw Content: {raw_text}")
                         if resp.status != 200:
@@ -628,7 +627,7 @@ async def handle_noitu_message(message: discord.Message):
                     # Lỗi hạ tầng → không kết thúc ván, cho người chơi ra đề lại
                     state.used_words.discard(norm_content)
                     await message.add_reaction("⚠️")
-                    await message.reply("⚠️ AI đang gặp sự cố kết nối. Vui lòng ra đề lại sau giây lát!")
+                    await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
                     rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
                     return
                 if not ai_res.get("valid") or not ai_res.get("ai_word"):
@@ -688,7 +687,7 @@ async def handle_noitu_message(message: discord.Message):
                     # Lỗi hạ tầng → không tính là thua, mời gửi lại
                     state.used_words.discard(norm_content)
                     await message.add_reaction("⚠️")
-                    await message.reply("⚠️ AI đang gặp sự cố kết nối. Vui lòng gửi lại cụm từ sau giây lát!")
+                    await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
                     rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 
@@ -729,7 +728,7 @@ async def handle_noitu_message(message: discord.Message):
                         # Lỗi hạ tầng lúc retry → mời người chơi gửi lại, không kết thúc oan
                         state.used_words.discard(norm_content)
                         await message.add_reaction("⚠️")
-                        await message.reply("⚠️ AI đang gặp sự cố kết nối. Vui lòng gửi lại cụm từ sau giây lát!")
+                        await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
                         rearm_timer(state, singleplayer_timeout_handler(message.channel, state, message.author.id))
                         return
                     if ai_res_retry.get("valid") and ai_res_retry.get("ai_word") and normalize_word(ai_res_retry["ai_word"]) not in state.used_words:
@@ -780,7 +779,7 @@ async def handle_noitu_message(message: discord.Message):
                 if val.get("api_error"):
                     # Lỗi hạ tầng → KHÔNG loại người chơi, mời gửi lại
                     await message.add_reaction("⚠️")
-                    await message.reply("⚠️ Trọng tài đang lag kết nối. Vui lòng gửi lại cụm từ!")
+                    await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
                     rearm_timer(state, multiplayer_timeout_handler(message.channel, state, message.author.id))
                     return
 

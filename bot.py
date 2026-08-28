@@ -316,10 +316,10 @@ async def on_message(message: discord.Message):
                         await message.channel.send(ai_reply[i:i+1900])
             except discord.HTTPException as e:
                 logger.error(f"Failed to send message: {e}")
-                await message.reply("❌ Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.")
+                await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
         except Exception as e:
-            logger.error(f"Error calling Xkiro AI API: {e}")
-            await message.reply(f"❌ Có lỗi xảy ra khi gọi AI: `{e}`")
+            logger.error(f"Error calling AI API: {e}")
+            await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
 
 # ================= Clear Channel Command =================
 
@@ -390,7 +390,7 @@ class ClearConfirmView(discord.ui.View):
 
         except Exception as e:
             logger.error(f"Error during clear channel: {e}")
-            await self.target_channel.send(f"❌ Có lỗi xảy ra trong quá trình xóa tin nhắn: `{e}`")
+            await self.target_channel.send("🐭 Chuột dethw vừa bị mèo tha mất rồi! Vui lòng liên hệ chủ nhân **@phantrongkhangg** (TikTok) để bắt chuột về nhé~")
 
     @discord.ui.button(label="❌ Hủy bỏ", style=discord.ButtonStyle.secondary, custom_id="clear_cancel_btn")
     async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):

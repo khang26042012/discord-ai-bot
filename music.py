@@ -268,21 +268,42 @@ async def _handle_event(ev: Dict):
 
 # ================= PLAYBACK CORE =================
 
-async def _ensure_voice(interaction: discord.Interaction) -> Optional[discord.VoiceClient]:
-    """Join/move voice channel cua nguoi dung."""
+async def _gateway_join(guild_id: int, channel_id: Optional[int], deaf: bool = True):
+    """Xin vao/roi kenh thoai QUA GATEWAY - khong tao VoiceClient rieng.
+    Lavalink se la ben duy nhat giu phien thoai (tranh 2 client danh nhau)."""
+    guild = _bot.get_guild(guild_id)
+    if guild is None:
+        raise RuntimeError("khong thay guild")
+    ws = guild._state._get_websocket(guild.id)
+    await ws.voice_state(guild.id, channel_id, self_mute=False, self_deaf=deaf)
+
+
+def _is_voice_connected(guild_id: int) -> bool:
+    gp = _guild_players.get(guild_id)
+    return bool(gp and gp.voice_session and gp.voice_token and gp.voice_endpoint)
+
+
+async def _ensure_voice(interaction: discord.Interaction) -> bool:
+    """Join/move voice channel cua nguoi dung qua gateway. Tra ve True khi co du voice data."""
     if not interaction.user.voice or not interaction.user.voice.channel:
-        return None
+        return False
     ch = interaction.user.voice.channel
-    vc = interaction.guild.voice_client
-    if vc is None:
-        vc = await ch.connect(self_deaf=True)
-    elif vc.channel.id != ch.id:
-        await vc.move_to(ch, self_deaf=True)
+    try:
+        await _gateway_join(interaction.guild_id, ch.id)
+    except Exception as e:
+        logger.warning(f"[Music] Loi xin vao kenh qua gateway: {e}")
+        return False
     gp = _gp(interaction.guild_id)
     gp.text_channel_id = interaction.channel_id
     gp.voice_channel_id = ch.id
     gp.last_active = time.time()
-    return vc
+    # Cho VOICE_SERVER_UPDATE + VOICE_STATE_UPDATE ve (toi da 10s)
+    for _ in range(40):
+        if _is_voice_connected(interaction.guild_id):
+            return True
+        await asyncio.sleep(0.25)
+    logger.warning("[Music] Khong nhan du voice data sau 10s")
+    return False
 
 
 def _sync_voice_from_vc(vc: discord.VoiceClient, gp: GuildPlayer) -> bool:
@@ -309,11 +330,9 @@ async def _play_next_by_id(guild_id: int):
     gp = _guild_players.get(guild_id)
     if gp is None:
         return
-    vc = _bot.get_guild(guild_id).voice_client if _bot.get_guild(guild_id) else None
-    if vc is None or not vc.is_connected():
+    if not _is_voice_connected(guild_id):
         await _cleanup_guild(guild_id, notify=False)
         return
-    _sync_voice_from_vc(vc, gp)
     vb = _voice_block(gp)
     if vb is None:
         logger.warning("[Music] Thieu voice data khi play")
@@ -366,6 +385,11 @@ async def on_socket_response(data: Dict):
             cid = d.get("channel_id")
             if cid:
                 gp.voice_channel_id = int(cid)
+            else:
+                # bot da roi kenh (bi day hoac tu roi) - xoa voice data
+                gp.voice_session = None
+                gp.voice_token = None
+                gp.voice_endpoint = None
 
 
 # ================= WATCHER (auto-stop khi trong/idle) =================
@@ -380,11 +404,11 @@ async def _voice_watcher():
                 g = _bot.get_guild(gid)
                 if g is None:
                     continue
-                vc = g.voice_client
-                if vc is None or not vc.is_connected():
+                if not _is_voice_connected(gid):
                     await _cleanup_guild(gid, notify=False)
                     continue
-                humans = [m for m in vc.channel.members if not m.bot]
+                vch = g.get_channel(gp.voice_channel_id or 0)
+                humans = [mem for mem in getattr(vch, "members", []) if not mem.bot] if vch else []
                 playing = _is_busy(gp)
                 if not humans:
                     if time.time() - gp.last_active >= ALONE_TIMEOUT_SEC:
@@ -414,14 +438,10 @@ async def _cleanup_guild(guild_id: int, notify: bool = True):
     if gp is None:
         return
     await _destroy_player(guild_id)
-    g = _bot.get_guild(guild_id)
-    if g:
-        vc = g.voice_client
-        if vc:
-            try:
-                await vc.disconnect(force=True)
-            except Exception:
-                pass
+    try:
+        await _gateway_join(guild_id, None, deaf=False)
+    except Exception:
+        pass
 
 
 # ================= UI CHON BAI =================
@@ -492,18 +512,37 @@ def setup(bot: commands.Bot):
     _bot = bot
     bot.add_listener(on_socket_response, name="on_socket_response")
 
+    @bot.tree.error
+    async def _music_tree_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+        logger.error(f"[Music] ❌ Loi lenh '{getattr(interaction.command, 'name', '?')}': {error}")
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("😢 Bot bị lỗi khi xử lý lệnh này, thử lại giúp mình nhé!", ephemeral=True)
+            else:
+                await interaction.response.send_message("😢 Bot bị lỗi khi xử lý lệnh này, thử lại giúp mình nhé!", ephemeral=True)
+        except Exception:
+            pass
+
     # ---------------- PHAT NHAC ----------------
     @bot.tree.command(name="play", description="▶️ Phát nhạc từ tên bài hát hoặc link (YouTube/SoundCloud)")
     @app_commands.describe(query="Tên bài hát hoặc link YouTube/SoundCloud")
     async def play(interaction: discord.Interaction, query: str):
+        _t0 = time.perf_counter()
+        logger.info(f"[Music] 📥 /play tu {interaction.user} | query={query[:60]!r}")
+        # DEFER NGAY - moi thao tac keo dai >3s phai bao Discord biet la "dang xu ly"
+        try:
+            await interaction.response.defer()
+        except discord.HTTPException as e:
+            logger.warning(f"[Music] ⚠️ DEFER FAIL sau {time.perf_counter()-_t0:.2f}s: {type(e).__name__} - interaction het han truoc khi bot kip phan hoi")
+            return
+        logger.info(f"[Music] ⚡ defer OK sau {time.perf_counter()-_t0:.2f}s")
         if not _lav_session_id:
-            return await interaction.response.send_message(
+            return await interaction.followup.send(
                 "⏳ Đang kết nối tới node nhạc, thử lại sau ít phút!", ephemeral=True)
-        vc = await _ensure_voice(interaction)
-        if vc is None:
-            return await interaction.response.send_message(
+        ok_voice = await _ensure_voice(interaction)
+        if not ok_voice:
+            return await interaction.followup.send(
                 "🤔 Bạn cần vào một kênh thoại trước đã!", ephemeral=True)
-        await interaction.response.defer()
 
         # tim kiem qua node (Lavalink chi hieu "ytsearch:" / "scsearch:" khong co so)
         identifier = query if query.startswith("http") else f"ytsearch:{query}"
@@ -665,11 +704,14 @@ def setup(bot: commands.Bot):
             return await interaction.response.send_message(embed=embed)
         idx = int(kenh.value)
         station = RADIO_STATIONS[idx]
-        vc = await _ensure_voice(interaction)
-        if vc is None:
-            return await interaction.response.send_message(
+        try:
+            await interaction.response.defer()
+        except discord.HTTPException:
+            return
+        ok_voice = await _ensure_voice(interaction)
+        if not ok_voice:
+            return await interaction.followup.send(
                 "🤔 Bạn cần vào một kênh thoại trước đã!", ephemeral=True)
-        await interaction.response.defer()
         gp = _gp(interaction.guild_id)
         gp.queue.clear()
         gp.radio_url = station["url"]
@@ -700,7 +742,7 @@ def setup(bot: commands.Bot):
             return await interaction.response.send_message(
                 "🚫 Lệnh này cần quyền **Quản lý tin nhắn**!", ephemeral=True)
         gp = _guild_players.get(interaction.guild_id)
-        if gp is None and interaction.guild.voice_client is None:
+        if gp is None and not _is_voice_connected(interaction.guild_id):
             return await interaction.response.send_message("🤔 Không có gì để dừng.", ephemeral=True)
         if gp:
             gp.queue.clear()
@@ -718,7 +760,7 @@ def setup(bot: commands.Bot):
         if not _can_moderate(interaction):
             return await interaction.response.send_message(
                 "🚫 Lệnh này cần quyền **Quản lý tin nhắn**!", ephemeral=True)
-        if interaction.guild.voice_client is None:
+        if not _is_voice_connected(interaction.guild_id):
             return await interaction.response.send_message("🤖 Bot không ở trong kênh thoại.", ephemeral=True)
         await _cleanup_guild(interaction.guild_id, notify=False)
         await interaction.response.send_message("👋 Đã rời khỏi kênh thoại!")
@@ -778,10 +820,13 @@ def setup(bot: commands.Bot):
                                                  "user_id": interaction.user.id})
         if not pl or not pl["tracks"]:
             return await interaction.response.send_message(f"❓ Playlist `{ten}` trống hoặc không tồn tại.", ephemeral=True)
-        vc = await _ensure_voice(interaction)
-        if vc is None:
-            return await interaction.response.send_message("🤔 Vào kênh thoại trước nhé!", ephemeral=True)
-        await interaction.response.defer()
+        try:
+            await interaction.response.defer()
+        except discord.HTTPException:
+            return
+        ok_voice = await _ensure_voice(interaction)
+        if not ok_voice:
+            return await interaction.followup.send("🤔 Vào kênh thoại trước nhé!", ephemeral=True)
         gp = _gp(interaction.guild_id)
         loaded: List[Dict] = []
         for item in pl["tracks"]:
