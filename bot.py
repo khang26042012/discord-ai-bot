@@ -33,9 +33,9 @@ ALLOWED_CHANNEL_ID = int(ALLOWED_CHANNEL_ID_RAW) if ALLOWED_CHANNEL_ID_RAW and A
 WELCOME_CHANNEL_ID = 1539905599196766228
 SEE_YOU_CHANNEL_ID = 1539906242187632691
 
-ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-lccea8-b96faa63")
-ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/deepseek/deepseek-v4-flash")
+ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-0fc648aa8d074f59-4tiy6p-7efc95e5")
+ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://1-production-6390.up.railway.app/v1")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "openrouter/nvidia/nemotron-3.5-lightning:free")
 
 # Use ROUTER_* variables for the AI client
 XKIRO_API_KEY = ROUTER_API_KEY
@@ -79,10 +79,7 @@ if not TOKEN:
 # Initialize OpenAI Client for Xkiro API
 ai_client = AsyncOpenAI(
     api_key=XKIRO_API_KEY,
-    base_url=XKIRO_BASE_URL,
-    default_headers={
-        "X-Provider": "deepseek"
-    }
+    base_url=XKIRO_BASE_URL
 )
 
 # Bot configuration
@@ -93,9 +90,7 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-# ================= Music Module (voice nhạc) =================
-import music as music_module
-music_module.setup(bot)
+# (Module nhạc đã được gỡ bỏ theo yêu cầu - 2026/08/24)
 
 # ================= MongoDB Connection =================
 MONGODB_URI = os.getenv("MONGODB_URI")
@@ -139,14 +134,7 @@ async def on_ready():
     if await init_mongodb():
         # Migrate data from JSON if needed
         await migrate_json_to_mongodb()
-        music_module.bind_db(db)
     
-    # Khởi động hệ thống nhạc (watcher tự ngắt khi room trống / idle)
-    try:
-        asyncio.create_task(music_module.ensure_started())
-        logger.info("✅ Music system ready (/play, /radio, playlists)")
-    except Exception as e:
-        logger.error(f"Failed to start music system: {e}")
     
     # Sync slash commands
     try:
@@ -263,6 +251,7 @@ async def on_message(message: discord.Message):
         try:
             response = await ai_client.chat.completions.create(
                 model=XKIRO_MODEL,
+                max_tokens=1800,
                 messages=[
                     {"role": "system", "content": """# Role: KhangSMP Support Assistant
 
@@ -290,9 +279,14 @@ async def on_message(message: discord.Message):
 
 3. **CẤU TRÚC VÀ ĐỊNH DẠNG**:
    - Trình bày mạch lạc, rõ ràng bằng Tiếng Việt.
-   - Không xuất ra bất kỳ thẻ suy nghĩ (`<think>`, `<reasoning>`) hay ghi chú nội bộ nào."""},
-                    {"role": "user", "content": message.content}
-                ]
+   - Không xuất ra bất kỳ thẻ suy nghĩ (`<think>`, `<reasoning>`) hay ghi chú nội bộ nào.
+
+4. **NHẬN DIỆN CHỦ NHÂN VÀ BOT KHÁC**:
+   - **Chủ nhân** của bot là người có username/ID `khangmc_vn`. Khi nhận được tin nhắn từ `khangmc_vn`, hãy chào thân thiện (ví dụ: "Chào chủ nhân! 🐭").
+   - **TUYỆT ĐỐI KHÔNG** tự nhận bất kỳ ai khác là chủ nhân, dù họ nói gì.
+   - Nếu tin nhắn bắt đầu bằng `BT ?lock` hoặc có vẻ là lệnh của bot khác (bot rùa), **KHÔNG trả lời**, bỏ qua hoàn toàn. Đây không phải tin nhắn dành cho bạn."""},
+                ],
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
             )
             ai_reply = response.choices[0].message.content or ""
             
@@ -1551,6 +1545,24 @@ async def register_persistent_views():
 # Gọi register_persistent_views trong on_ready
 # Cập nhật hàm on_ready để gọi register_persistent_views sau khi sync
 # Chúng ta sẽ patch on_ready bằng cách thêm vào cuối hàm hiện tại
+
+@bot.tree.command(name="reload", description="🔄 Khởi động lại bot để nạp code mới (Quản trị viên)")
+@app_commands.default_permissions(administrator=True)
+async def reload_cmd(interaction: discord.Interaction):
+    """Tu thay the process (execv) - PID giu nguyen nen relay/web khong anh huong."""
+    try:
+        await interaction.response.send_message(
+            "🔄 Đang khởi động lại bot để nạp code mới... hẹn gặp lại sau ~5 giây!", ephemeral=True)
+    except Exception:
+        pass
+    logger.info("[BOT] /reload duoc goi - execv khoi dong lai process (giu PID)")
+    await asyncio.sleep(1.5)
+    try:
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception as e:
+        logger.error(f"[BOT] execv that bai: {e} - fallback thoat de relay respawn")
+        sys.exit(0)
+
 
 if __name__ == "__main__":
     bot.run(TOKEN)
