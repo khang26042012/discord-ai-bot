@@ -9,7 +9,7 @@ topics:
       - server
       - thông tin server
       - giới thiệu
-      - server minecraft
+      - khangsmp
       - ip
       - địa chỉ server
       - java
@@ -22,10 +22,10 @@ topics:
       - chủ server
       - bảo trì
 
-    title: Thông tin chung về Server
+    title: Thông tin chung về KhangSMP
 
     content: |
-      Tên server: (chưa công bố)
+      Tên server: KhangSMP
 
       Địa chỉ IP (Java & Bedrock):
       secrets
@@ -116,7 +116,7 @@ topics:
       === TPA ===
       /tpa <tên>        - Gửi yêu cầu dịch chuyển
       /tpaccept         - Chấp nhận
-      /tpdeny           - Từ chối
+      /tpdeny                 - Từ chối
 
       === Chat & Tiện ích ===
       /msg <tên>        - Nhắn tin riêng
@@ -124,14 +124,7 @@ topics:
       /ignore <tên>     - Chặn/Bỏ chặn tin nhắn
       /nightvision on   - Bật hiệu ứng nhìn trong đêm
       /nightvision off  - Tắt hiệu ứng nhìn trong đêm
-
-      === Kinh tế ===
-      /balance          - Xem số dư
-      /pay <tên> <số>   - Chuyển tiền
-
-      === Khác ===
       /kit newbie       - Nhận bộ đồ khởi đầu
-      /claimslist       - Xem số claim blocks còn lại và danh sách claim
 
       Lưu ý: Hầu hết lệnh dịch chuyển có cooldown 3 giây.
 
@@ -187,8 +180,8 @@ topics:
     aliases:
       - rank
       - cấp bậc
-      - media
-      - vip
+      - admin
+      - owner
 
     title: Rank
 
@@ -196,8 +189,7 @@ topics:
       Hiện tại server có các rank:
 
       • Member   - Rank mặc định
-      • VIP      - Rank đặc quyền
-      • Media    - Rank dành cho người làm nội dung
+      • Admin    - Quản trị viên
       • Owner    - Chủ server
 
       Lưu ý:
@@ -420,7 +412,6 @@ topics:
       Floodgate
       ViaVersion
       PlaceholderAPI
-      DecentHolograms
       EntityClearer
       Chunky
       TAB
@@ -428,7 +419,6 @@ topics:
       SkBee
       GrimAC
       RideOnHead
-      SimpleTpa
       VeinMiner
       NightVision
 
@@ -456,31 +446,7 @@ topics:
       /veinminer toggle    - Bật hoặc tắt tính năng VeinMiner cho bản thân
 
   # ==================================================
-  # 16. RIDE ON HEAD (CƯỠI NGƯỜI CHƠI)
-  # ==================================================
-
-  - id: rideonhead
-    aliases:
-      - rideonhead
-      - ride
-      - cưỡi đầu
-      - đội đầu
-      - cưỡi người chơi
-
-    title: RideOnHead (Cưỡi người chơi)
-
-    content: |
-      Tính năng giải trí cho phép bạn ngồi lên đầu người chơi khác.
-
-      Cách sử dụng:
-      - Chuột phải (trên Java/PC) hoặc Đè/Nhấn giữ (trên PE/Bedrock) vào người chơi khác để cưỡi lên đầu.
-      - Nhấn phím Shift / Nút ngồi xuống để leo xuống.
-
-      Lệnh cá nhân:
-      /ride blacklist      - Thêm/Xóa người chơi vào danh sách cấm cưỡi lên đầu bạn
-
-  # ==================================================
-  # 17. GRIMAC (CHỐNG HACK)
+  # 16. GRIMAC (CHỐNG HACK)
   # ==================================================
 
   - id: grimac
@@ -496,7 +462,7 @@ topics:
       Hệ thống tự động ngăn chặn các hành vi gian lận (hack/cheat) để bảo vệ server.
 
   # ==================================================
-  # 18. NIGHT VISION (TẦM NHÌN ĐÊM)
+  # 17. NIGHT VISION (TẦM NHÌN ĐÊM)
   # ==================================================
 
   - id: nightvision
@@ -515,3 +481,32 @@ topics:
       Cách sử dụng:
       /nightvision on   - Bật hiệu ứng nhìn trong đêm
       /nightvision off  - Tắt hiệu ứng nhìn trong đêm
+
+  # ==================================================
+  # 18. HƯỚNG DẪN NGỒI LÊN ĐẦU NGƯỜI CHƠI
+  # ==================================================
+
+  - id: ride_guide
+    aliases:
+      - ride
+      - rideonhead
+      - cưỡi đầu
+      - đội đầu
+      - hướng dẫn ngồi lên đầu
+      - cách cưỡi người chơi
+      - đè vào người chơi
+      - leo lên đầu
+
+    title: Hướng dẫn ngồi lên đầu người chơi
+
+    content: |
+      Để ngồi hoặc cưỡi lên đầu người chơi khác trong server:
+
+      • Điện thoại (PE / Bedrock): Nhấn giữ (đè) vào người chơi khác.
+      • Máy tính (Java / PC): Nhấn chuột phải vào người chơi khác.
+
+      Cách leo xuống:
+      - Nhấn phím Shift hoặc nút Ngồi xuống (Sneak) để nhảy xuống.
+
+      Lệnh cấm người khác cưỡi:
+      /ride blacklist    - Chặn/Cho phép người khác cưỡi lên đầu bạn
