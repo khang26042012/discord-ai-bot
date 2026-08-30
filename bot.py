@@ -48,7 +48,7 @@ _mc_message_queue: list[dict] = []
 _mc_queue_lock = asyncio.Lock()
 
 ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-plb8os-53982a47")
-ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://1-production-6390.up.railway.app/v1")
+ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
 ROUTER_MODEL = os.getenv("ROUTER_MODEL", "openrouter/nvidia/nemotron-3.5-lightning:free")
 
 # Use ROUTER_* variables for the AI client

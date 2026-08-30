@@ -15,7 +15,7 @@ logger = logging.getLogger("NoiTuGame")
 # Environment variables - Shared with bot.py via ROUTER_* vars
 AI_MODEL = os.getenv("ROUTER_MODEL", "openrouter/nvidia/nemotron-3.5-lightning:free")
 AI_API_KEY = os.getenv("ROUTER_API_KEY", "")
-AI_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://api.xkiro.com/v1")
+AI_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
 NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else None
 
