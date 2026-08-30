@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from discord.ui import View, Button
+from discord.ui import View, Button, Modal, TextInput
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import motor.motor_asyncio
@@ -1660,6 +1660,76 @@ async def register_persistent_views():
 # Gọi register_persistent_views trong on_ready
 # Cập nhật hàm on_ready để gọi register_persistent_views sau khi sync
 # Chúng ta sẽ patch on_ready bằng cách thêm vào cuối hàm hiện tại
+
+
+# ================= /paste Command =================
+
+class PasteModal(discord.ui.Modal, title="Paste Content"):
+    content = discord.ui.TextInput(
+        label="Content",
+        placeholder="Enter or paste your content here... (Markdown supported)",
+        style=discord.TextStyle.paragraph,
+        required=True,
+        max_length=4000,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Show ephemeral preview with confirm/cancel buttons
+        preview_embed = discord.Embed(
+            title="Preview",
+            description=self.content.value,
+            color=discord.Color.blurple(),
+        )
+        preview_embed.set_footer(text="This message is only visible to you.")
+        view = PasteConfirmView(self.content.value)
+        await interaction.response.send_message(embed=preview_embed, view=view, ephemeral=True)
+
+
+class PasteConfirmView(discord.ui.View):
+    def __init__(self, content: str, color_hex: str = "#5865F2"):
+        super().__init__(timeout=120)
+        self.paste_content = content
+        self.color_hex = color_hex
+
+    @discord.ui.button(label="Send", style=discord.ButtonStyle.green, emoji="✅")
+    async def confirm_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            color_int = int(self.color_hex.lstrip("#"), 16)
+        except ValueError:
+            color_int = 0x5865F2
+        embed = discord.Embed(description=self.paste_content, color=color_int)
+        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url if interaction.user.avatar else None)
+        await interaction.channel.send(embed=embed)
+        await interaction.response.edit_message(content="✅ Message sent!", embed=None, view=None)
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, emoji="❌")
+    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content="❌ Cancelled.", embed=None, view=None)
+        self.stop()
+
+
+@bot.tree.command(name="paste", description="Paste content with Markdown and color support")
+@app_commands.describe(color="Embed color (optional)")
+@app_commands.autocomplete(color=color_autocomplete)
+async def paste_cmd(interaction: discord.Interaction, color: str = "#5865F2"):
+    modal = PasteModal()
+    # Store color for later use in confirm view
+    original_on_submit = modal.on_submit
+
+    async def custom_on_submit(submit_interaction: discord.Interaction):
+        preview_embed = discord.Embed(
+            title="Preview",
+            description=modal.content.value,
+            color=discord.Color.blurple(),
+        )
+        preview_embed.set_footer(text="This message is only visible to you.")
+        view = PasteConfirmView(modal.content.value, color)
+        await submit_interaction.response.send_message(embed=preview_embed, view=view, ephemeral=True)
+
+    modal.on_submit = custom_on_submit
+    await interaction.response.send_modal(modal)
+
 
 @bot.tree.command(name="reload", description="🔄 Khởi động lại bot để nạp code mới (Quản trị viên)")
 @app_commands.default_permissions(administrator=True)
