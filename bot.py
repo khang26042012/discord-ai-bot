@@ -5,6 +5,7 @@ import re
 import json
 import asyncio
 import aiohttp
+from aiohttp import web
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -16,6 +17,8 @@ from typing import Optional
 import motor.motor_asyncio
 from noitu import start_noitu_game, handle_noitu_message
 import yaml
+from aiohttp import web
+from collections import deque
 
 # Setup logging
 logging.basicConfig(
@@ -33,6 +36,16 @@ ALLOWED_CHANNEL_ID_RAW = os.getenv("ALLOWED_CHANNEL_ID")
 ALLOWED_CHANNEL_ID = int(ALLOWED_CHANNEL_ID_RAW) if ALLOWED_CHANNEL_ID_RAW and ALLOWED_CHANNEL_ID_RAW.isdigit() else None
 WELCOME_CHANNEL_ID = 1539905599196766228
 SEE_YOU_CHANNEL_ID = 1539906242187632691
+
+# ================= Discord-to-Minecraft Bridge =================
+MC_BRIDGE_CHANNEL_ID = 1542931332236316873
+MC_BRIDGE_MAX_QUEUE = 100
+POLLING_API_KEY = os.getenv("POLLING_API_KEY", "")
+MC_BRIDGE_PORT = int(os.getenv("MC_BRIDGE_PORT", "8080"))
+
+# In-memory message queue for Minecraft polling
+_mc_message_queue: list[dict] = []
+_mc_queue_lock = asyncio.Lock()
 
 ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-0fc648aa8d074f59-4tiy6p-7efc95e5")
 ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://1-production-6390.up.railway.app/v1")
@@ -212,6 +225,13 @@ async def on_ready():
         logger.error(f"Failed to register persistent views: {e}")
         
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="tin nhắn AI"))
+    
+    # Start Minecraft Bridge REST API server
+    try:
+        bot._mc_bridge_runner = await start_mc_bridge_server()
+        logger.info(f"[MC-Bridge] Server started successfully on port {MC_BRIDGE_PORT}")
+    except Exception as e:
+        logger.error(f"[MC-Bridge] Failed to start REST API server: {e}")
 
 @bot.event
 async def on_member_join(member):
@@ -291,6 +311,28 @@ async def on_message(message: discord.Message):
 
         return  # Stop further processing for this message
 
+    # ================= Minecraft Bridge: Capture messages =================
+    if message.channel.id == MC_BRIDGE_CHANNEL_ID:
+        # Skip bot/webhook messages to avoid loops
+        if message.author.bot or message.webhook_id is not None:
+            pass  # Still continue to other handlers below
+        else:
+            try:
+                msg_data = {
+                    "author": str(message.author),
+                    "author_id": str(message.author.id),
+                    "content": message.content,
+                    "timestamp": message.created_at.isoformat(),
+                    "message_id": str(message.id),
+                }
+                async with _mc_queue_lock:
+                    _mc_message_queue.append(msg_data)
+                    # Trim queue if exceeds max size
+                    while len(_mc_message_queue) > MC_BRIDGE_MAX_QUEUE:
+                        _mc_message_queue.pop(0)
+                logger.info(f"[MC-Bridge] Captured message from {message.author}: {message.content[:80]}")
+            except Exception as e:
+                logger.error(f"[MC-Bridge] Failed to capture message: {e}")
 
     # Ignore own messages or other bot messages
     if message.author == bot.user or message.author.bot:
@@ -1656,6 +1698,51 @@ async def register_persistent_views():
                 logger.warning(f"Xóa panel không còn tồn tại: {message_id}")
             except Exception as e:
                 logger.error(f"Lỗi khi đăng ký persistent view cho message {message_id}: {e}")
+
+
+# ================= Minecraft Bridge REST API =================
+
+async def _mc_polling_handler(request):
+    """GET /api/discord-messages/latest - Returns queued messages for Minecraft polling."""
+    # Auth check
+    auth_header = request.headers.get("Authorization", "")
+    if not POLLING_API_KEY or auth_header != f"Bearer {POLLING_API_KEY}":
+        logger.warning(f"[MC-Bridge] Unauthorized polling request from {request.remote}")
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    
+    async with _mc_queue_lock:
+        messages = list(_mc_message_queue)
+        _mc_message_queue.clear()  # Mark as fetched by clearing queue
+    
+    logger.info(f"[MC-Bridge] Polling request: returned {len(messages)} messages")
+    return web.json_response({
+        "messages": messages,
+        "count": len(messages),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+async def _mc_health_handler(request):
+    """GET /api/health - Health check endpoint."""
+    return web.json_response({"status": "ok", "queue_size": len(_mc_message_queue)})
+
+
+async def start_mc_bridge_server():
+    """Start the aiohttp web server for Minecraft bridge API."""
+    app = web.Application()
+    app.router.add_get("/api/discord-messages/latest", _mc_polling_handler)
+    app.router.add_get("/api/health", _mc_health_handler)
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", MC_BRIDGE_PORT)
+    await site.start()
+    logger.info(f"[MC-Bridge] REST API server started on port {MC_BRIDGE_PORT}")
+    logger.info(f"[MC-Bridge] Endpoint: GET /api/discord-messages/latest")
+    logger.info(f"[MC-Bridge] Health: GET /api/health")
+    return runner  # Keep reference to prevent GC
+
+
 
 # Gọi register_persistent_views trong on_ready
 # Cập nhật hàm on_ready để gọi register_persistent_views sau khi sync
