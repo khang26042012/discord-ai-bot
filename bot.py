@@ -727,8 +727,10 @@ async def serverinfo_slash(interaction: discord.Interaction):
         await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
         return
 
-    global _mc_server_stats, _mc_server_stats_time
-    if _mc_server_stats is None:
+    async with _server_stats_lock:
+        stats = dict(_server_stats)
+    
+    if not stats or "_last_update" not in stats:
         await interaction.response.send_message(
             "⚠️ Chưa có dữ liệu từ server Minecraft.\n"
             "Hãy đảm bảo plugin StartSeachKhangg đã được cài và đang gửi dữ liệu qua WebSocket.",
@@ -736,8 +738,13 @@ async def serverinfo_slash(interaction: discord.Interaction):
         )
         return
 
-    stats = _mc_server_stats
-    updated = _mc_server_stats_time.strftime("%H:%M:%S") if _mc_server_stats_time else "N/A"
+    updated = stats.get("_last_update", "N/A")
+    if updated != "N/A":
+        try:
+            from datetime import datetime as dt
+            updated = dt.fromisoformat(updated.replace("Z", "+00:00")).strftime("%H:%M:%S")
+        except Exception:
+            pass
 
     # Build embed
     embed = discord.Embed(
