@@ -1698,8 +1698,8 @@ class PasteConfirmView(discord.ui.View):
         except ValueError:
             color_int = 0x5865F2
         embed = discord.Embed(description=self.paste_content, color=color_int)
-        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url if interaction.user.avatar else None)
-        await interaction.channel.send(embed=embed)
+        # Send as a standalone message (no reply, no author attribution)
+        await interaction.channel.send(embed=embed, reference=None, mention_author=False)
         await interaction.response.edit_message(content="✅ Message sent!", embed=None, view=None)
         self.stop()
 
