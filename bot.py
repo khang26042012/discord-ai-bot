@@ -47,6 +47,11 @@ MC_BRIDGE_PORT = int(os.getenv("MC_BRIDGE_PORT", "8080"))
 _mc_message_queue: list[dict] = []
 _mc_queue_lock = asyncio.Lock()
 
+# ================= Server Stats (from StartSeachKhangg plugin via WebSocket) =================
+_server_stats: dict = {}  # Latest server stats from MC plugin
+_server_stats_lock = asyncio.Lock()
+_ws_connections: set = set()  # Active WebSocket connections from MC servers
+
 ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-plb8os-53982a47")
 ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
 ROUTER_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/qwen/qwen3.7-plus:free")
@@ -714,6 +719,76 @@ async def info_slash(interaction: discord.Interaction):
     embed.add_field(name="AI Model", value=f"`{XKIRO_MODEL}`", inline=True)
     embed.set_footer(text="Railway Deployed Discord AI Bot")
     await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="serverinfo", description="Xem thông tin server Minecraft (từ WebSocket)")
+async def serverinfo_slash(interaction: discord.Interaction):
+    if not await check_manager_interaction(interaction):
+        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        return
+
+    global _mc_server_stats, _mc_server_stats_time
+    if _mc_server_stats is None:
+        await interaction.response.send_message(
+            "⚠️ Chưa có dữ liệu từ server Minecraft.\n"
+            "Hãy đảm bảo plugin StartSeachKhangg đã được cài và đang gửi dữ liệu qua WebSocket.",
+            ephemeral=True
+        )
+        return
+
+    stats = _mc_server_stats
+    updated = _mc_server_stats_time.strftime("%H:%M:%S") if _mc_server_stats_time else "N/A"
+
+    # Build embed
+    embed = discord.Embed(
+        title="🖥️ Thông Tin Server Minecraft",
+        color=discord.Color.green()
+    )
+
+    # Server info
+    server_name = stats.get("server_name", "Unknown")
+    mc_version = stats.get("minecraft_version", "Unknown")
+    players = stats.get("player_slots_formatted", "?/?")
+    tps = stats.get("tps", 0)
+    uptime = stats.get("uptime_formatted", "N/A")
+
+    embed.add_field(name="Server", value=f"**{server_name}** (MC {mc_version})", inline=False)
+    embed.add_field(name="👥 Players", value=players, inline=True)
+    embed.add_field(name="⚡ TPS", value=str(tps), inline=True)
+    embed.add_field(name="⏱️ Uptime", value=uptime, inline=True)
+
+    # RAM
+    ram_used = stats.get("system_ram_used_mb", 0)
+    ram_total = stats.get("system_ram_total_mb", 0)
+    ram_pct = stats.get("system_ram_usage_percent", 0)
+    jvm_used = stats.get("jvm_heap_used_mb", 0)
+    jvm_max = stats.get("jvm_heap_max_mb", 0)
+    embed.add_field(
+        name="🧠 RAM",
+        value=f"System: {ram_used}/{ram_total} MB ({ram_pct}%)\nJVM Heap: {jvm_used}/{jvm_max} MB",
+        inline=True
+    )
+
+    # CPU
+    cpu_cores = stats.get("cpu_cores", 0)
+    cpu_load = stats.get("cpu_load_percent", 0)
+    embed.add_field(name="🔧 CPU", value=f"{cpu_cores} cores, Load: {cpu_load}%", inline=True)
+
+    # Disk
+    disk_used = stats.get("disk_used_gb", 0)
+    disk_total = stats.get("disk_total_gb", 0)
+    disk_free = stats.get("disk_free_gb", 0)
+    embed.add_field(name="💾 Disk", value=f"{disk_used}/{disk_total} GB (Free: {disk_free} GB)", inline=True)
+
+    # Network
+    network = stats.get("network", {})
+    hostname = network.get("hostname", "N/A")
+    ip = network.get("ip", "N/A")
+    embed.add_field(name="🌐 Network", value=f"Host: {hostname[:16]}...\nIP: {ip}", inline=True)
+
+    embed.set_footer(text=f"Cập nhật lúc: {updated} | Scan ID: {stats.get('scan_id', 'N/A')}")
+    await interaction.response.send_message(embed=embed)
+
 
 @bot.tree.command(name="help", description="Danh sách các lệnh có sẵn")
 async def help_slash(interaction: discord.Interaction):
@@ -1727,11 +1802,62 @@ async def _mc_health_handler(request):
     return web.json_response({"status": "ok", "queue_size": len(_mc_message_queue)})
 
 
+
+
+# ================= WebSocket Server for MC Plugin Stats =================
+
+async def _ws_server_stats_handler(request):
+    """WebSocket endpoint for MC plugin to push server stats continuously."""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    
+    _ws_connections.add(ws)
+    remote = request.remote or "unknown"
+    logger.info(f"[WS] MC server connected from {remote}")
+    
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                try:
+                    data = json.loads(msg.data)
+                    async with _server_stats_lock:
+                        _server_stats.update(data)
+                        _server_stats["_last_update"] = datetime.now(timezone.utc).isoformat()
+                        _server_stats["_source_ip"] = remote
+                    # No log per message to avoid spam - only log on connect/disconnect
+                except json.JSONDecodeError:
+                    logger.warning(f"[WS] Invalid JSON from {remote}: {msg.data[:100]}")
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                logger.error(f"[WS] Error from {remote}: {ws.exception()}")
+    finally:
+        _ws_connections.discard(ws)
+        logger.info(f"[WS] MC server disconnected from {remote}")
+    
+    return ws
+
+
+async def _server_stats_api_handler(request):
+    """GET /api/server-stats - Returns latest server stats as JSON."""
+    auth_header = request.headers.get("Authorization", "")
+    if not POLLING_API_KEY or auth_header != f"Bearer {POLLING_API_KEY}":
+        return web.json_response({"error": "Unauthorized"}, status=401)
+    
+    async with _server_stats_lock:
+        stats = dict(_server_stats)
+    
+    if not stats:
+        return web.json_response({"error": "No server stats available yet"}, status=503)
+    
+    return web.json_response(stats)
+
+
 async def start_mc_bridge_server():
     """Start the aiohttp web server for Minecraft bridge API."""
     app = web.Application()
     app.router.add_get("/api/discord-messages/latest", _mc_polling_handler)
     app.router.add_get("/api/health", _mc_health_handler)
+    app.router.add_get("/ws/server-stats", _ws_server_stats_handler)
+    app.router.add_get("/api/server-stats", _server_stats_api_handler)
     
     runner = web.AppRunner(app)
     await runner.setup()
@@ -1740,6 +1866,8 @@ async def start_mc_bridge_server():
     logger.info(f"[MC-Bridge] REST API server started on port {MC_BRIDGE_PORT}")
     logger.info(f"[MC-Bridge] Endpoint: GET /api/discord-messages/latest")
     logger.info(f"[MC-Bridge] Health: GET /api/health")
+    logger.info(f"[MC-Bridge] WebSocket: ws://0.0.0.0:{MC_BRIDGE_PORT}/ws/server-stats")
+    logger.info(f"[MC-Bridge] Stats API: GET /api/server-stats")
     return runner  # Keep reference to prevent GC
 
 
