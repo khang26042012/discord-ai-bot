@@ -47,7 +47,7 @@ MC_BRIDGE_PORT = int(os.getenv("MC_BRIDGE_PORT", "8080"))
 _mc_message_queue: list[dict] = []
 _mc_queue_lock = asyncio.Lock()
 
-ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-0fc648aa8d074f59-4tiy6p-7efc95e5")
+ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-plb8os-53982a47")
 ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://1-production-6390.up.railway.app/v1")
 ROUTER_MODEL = os.getenv("ROUTER_MODEL", "openrouter/nvidia/nemotron-3.5-lightning:free")
 
