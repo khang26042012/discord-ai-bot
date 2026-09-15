@@ -1,22 +1,25 @@
-FROM python:3.11-slim
+FROM node:20-alpine AS base
 
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg nodejs npm ca-certificates git \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-RUN git clone --single-branch --depth 1 --branch 1.3.2 \
-        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /root/bgutil-ytdlp-pot-provider \
-    && cd /root/bgutil-ytdlp-pot-provider/server \
-    && npm ci --no-audit --no-fund \
-    && npx tsc
-
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN corepack enable && pnpm build
 
-EXPOSE 8080
-
-CMD ["python3", "bot.py"]
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+USER nextjs
+EXPOSE 3000
+CMD ["npx", "next", "start", "-p", "3000"]
