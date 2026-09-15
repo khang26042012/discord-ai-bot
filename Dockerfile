@@ -1,25 +1,23 @@
-FROM node:20-alpine AS base
+FROM python:3.11-slim
 
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
 
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# ffmpeg (phát nhạc) + nodejs/npm/git (sinh PO token YouTube qua bgutil)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg nodejs npm ca-certificates git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Bộ sinh PO token bgutil - clone về HOME để plugin tự nhận diện (script mode)
+# Build: npm ci + npx tsc -> tạo server/build/generate_once.js
+RUN git clone --single-branch --depth 1 --branch 1.3.2 \
+        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /root/bgutil-ytdlp-pot-provider \
+    && cd /root/bgutil-ytdlp-pot-provider/server \
+    && npm ci --no-audit --no-fund \
+    && npx tsc
+
 COPY . .
-RUN corepack enable && pnpm build
 
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-USER nextjs
-EXPOSE 3000
-CMD ["npx", "next", "start", "-p", "3000"]
+CMD ["python", "bot.py"]
