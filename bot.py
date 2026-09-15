@@ -31,7 +31,7 @@ logger = logging.getLogger("DiscordBot")
 # Load environment variables
 load_dotenv()
 
-TOKEN = os.getenv("DISCORD_TOKEN") or "MTUzNDg2MjQ4MTcyMDIxNzY0MA.GrMNKt.tsHqZ7hZcDK4F5HTLI2jFKkqUplHdJ3rFIAN7I"
+TOKEN = os.getenv("DISCORD_TOKEN")
 ALLOWED_CHANNEL_ID_RAW = os.getenv("ALLOWED_CHANNEL_ID")
 ALLOWED_CHANNEL_ID = int(ALLOWED_CHANNEL_ID_RAW) if ALLOWED_CHANNEL_ID_RAW and ALLOWED_CHANNEL_ID_RAW.isdigit() else None
 WELCOME_CHANNEL_ID = 1539905599196766228
