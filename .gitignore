@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+.railway/
+.venv/
+*.pyo
+noitu_test_results.json
