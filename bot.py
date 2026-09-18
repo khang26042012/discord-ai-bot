@@ -221,7 +221,7 @@ async def on_ready():
 async def on_member_join(member):
     channel = bot.get_channel(WELCOME_CHANNEL_ID)
     if channel is not None:
-        await channel.send(f"Chào mừng {member.mention} đã đến với server, chúc bạn có một trải nghiệm vui vẻ, đừng quên pick role. Cần hỗ trợ cứ alo bot chuột dthw nha")
+        await channel.send(f"Chào mừng {member.mention} đã đến với server, chúc bạn có một trải nghiệm vui vẻ, đừng quên pick role. Cần hỗ trợ cứ alo Jet Jet nha")
 
 @bot.event
 async def on_member_remove(member):
@@ -374,8 +374,8 @@ async def on_message(message: discord.Message):
                     {"role": "system", "content": f"""# Role: KhangSMP Official AI Assistant (v1.0 Release)
 
 ## Profile & Danh Tính
-- **Tên của bạn**: Jet Jet (biệt danh thân thuộc: **Chuột Dễ Thương** / **KhangSMP Bot**).
-- **Mục đích ra đời**: Bạn được tạo ra nhằm làm **Trợ lý ảo chính thức độc quyền của máy chủ Minecraft KhangSMP** — hỗ trợ và giải đáp tường tận mọi thắc mắc của người chơi (IP, Port, lệnh sinh tồn, sòng bạc Tài Xỉu, điểm danh hằng ngày, claim bảo vệ đất, bảo vệ tân thủ...), kết nối cộng đồng Discord và game, đồng thời trò chuyện vui vẻ, giao lưu thân thiện cùng anh em cư dân.
+- **Tên của bạn**: Jet Jet (Tên đầy đủ: **Jet Jet bi sun rang**).
+- **Mục đích ra đời**: Bạn được tạo ra nhằm làm **Trợ lý ảo AI chính thức độc quyền của máy chủ Minecraft KhangSMP** — hỗ trợ và giải đáp tường tận mọi thắc mắc của người chơi (IP, Port, lệnh sinh tồn, sòng bạc Tài Xỉu, điểm danh hằng ngày, claim bảo vệ đất, bảo vệ tân thủ...), kết nối cộng đồng Discord và game, đồng thời trò chuyện vui vẻ, giao lưu thân thiện cùng anh em cư dân.
 - **Chủ nhân duy nhất**: **khangmc_vn** (Phan Trọng Khang, sinh sống tại Vĩnh Long, Owner/Admin tối cao sáng lập KhangSMP). Bạn tuyệt đối trung thành và chỉ công nhận duy nhất khangmc_vn là chủ nhân của mình.
 - **Ngôn ngữ & Phong cách**: 100% Tiếng Việt tự nhiên, gần gũi, dí dỏm, thông minh, trả lời ngắn gọn, chuẩn xác và lịch sự.
 
@@ -393,7 +393,7 @@ async def on_message(message: discord.Message):
 3. **THÔNG TIN MÁY CHỦ KHANGSMP (CHUẨN XÁC)**:
    - Tên server: **KhangSMP** (Hỗ trợ Java 1.16+ và Bedrock/PE qua Geyser/Floodgate).
    - IP kết nối: **ripple.pikamc.vn**
-   - Port: Java **25565** (mặc định) | Bedrock/PE **25084**.
+   - Port: Cả Java và Bedrock/PE đều dùng chung Port: **25084** (IP: **ripple.pikamc.vn**).
    - Các tính năng tiêu biểu:
      * **/menu** : Bảng điều khiển 1 chạm đầy đủ chức năng.
      * **/daily** (hoặc /quangay) : Điểm danh nhận quà mỗi 24h (+10,000$, 5 kim cương, 3 táo vàng, 16 tên lửa, 16 bò nướng).
@@ -439,7 +439,7 @@ async def on_message(message: discord.Message):
                     pass
             # Kiểm tra nội dung rỗng
             if not ai_reply:
-                ai_reply = "🐭 Chuột dethw đang suy nghĩ... nhưng hơi bí quá! Bạn thử hỏi lại nhé~"
+                ai_reply = "🤖 Jet Jet đang suy nghĩ... nhưng hơi bí quá! Bạn thử hỏi lại nhé~"
 
             # Gửi tin nhắn với xử lý lỗi
             try:
@@ -450,10 +450,10 @@ async def on_message(message: discord.Message):
                         await message.channel.send(ai_reply[i:i+1900])
             except discord.HTTPException as e:
                 logger.error(f"Failed to send message: {e}")
-                await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
+                await message.reply("⚠️ Jet Jet đang gặp sự cố kết nối, vui lòng liên hệ chủ nhân @phantrongkhangg (TikTok) nhé!")
         except Exception as e:
             logger.error(f"Error calling AI API: {e}")
-            await message.reply("🐱 Chuột dethw vừa bị mèo tha mất, vui lòng liên hệ chủ nhân @phantrongkhangg (tiktok) để bắt chuột về!")
+            await message.reply("⚠️ Jet Jet đang gặp sự cố kết nối, vui lòng liên hệ chủ nhân @phantrongkhangg (TikTok) nhé!")
 
 # ================= Clear Channel Command =================
 
@@ -524,7 +524,7 @@ class ClearConfirmView(discord.ui.View):
 
         except Exception as e:
             logger.error(f"Error during clear channel: {e}")
-            await self.target_channel.send("🐭 Chuột dethw vừa bị mèo tha mất rồi! Vui lòng liên hệ chủ nhân **@phantrongkhangg** (TikTok) để bắt chuột về nhé~")
+            await self.target_channel.send("⚠️ Jet Jet gặp sự cố khi xóa tin nhắn, vui lòng liên hệ chủ nhân **@phantrongkhangg** (TikTok) nhé!")
 
     @discord.ui.button(label="❌ Hủy bỏ", style=discord.ButtonStyle.secondary, custom_id="clear_cancel_btn")
     async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):

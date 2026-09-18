@@ -31,7 +31,7 @@ topics:
       ripple.pikamc.vn
 
       Port:
-      Java: 25565 (mặc định) | Bedrock/PE: 25084
+      Cả Java & Bedrock/PE: 25084 (IP: ripple.pikamc.vn)
 
       Phiên bản hỗ trợ:
       Minecraft Java 1.16 trở lên + Bedrock/PE (qua Geyser/Floodgate)
