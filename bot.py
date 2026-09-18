@@ -1722,6 +1722,45 @@ async def _mc_polling_handler(request):
     })
 
 
+async def _mc_incoming_message_handler(request):
+    """POST /api/minecraft-messages - Receive chat messages from Minecraft and forward to Discord."""
+    auth_header = request.headers.get("Authorization", "")
+    if not POLLING_API_KEY or auth_header != f"Bearer {POLLING_API_KEY}":
+        logger.warning(f"[MC-Bridge] Unauthorized incoming chat message from {request.remote}")
+        return web.json_response({"error": "Unauthorized"}, status=401)
+
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"error": "Invalid JSON"}, status=400)
+
+    player = str(data.get("player", "Unknown")).strip()
+    msg = str(data.get("message", "")).strip()
+
+    if not player or not msg:
+        return web.json_response({"error": "Missing player or message"}, status=400)
+
+    # Chống spam mention @everyone / @here từ trong game
+    msg_cleaned = msg.replace("@everyone", "@​everyone").replace("@here", "@​here")
+
+    # Gửi tin nhắn vào kênh MC_BRIDGE_CHANNEL_ID (#🌉・𝐜𝐡𝐚𝐭𝐢𝐧𝐠𝐚𝐦𝐞)
+    target_chan = bot.get_channel(MC_BRIDGE_CHANNEL_ID)
+    if not target_chan:
+        try:
+            target_chan = await bot.fetch_channel(MC_BRIDGE_CHANNEL_ID)
+        except Exception as e:
+            logger.error(f"[MC-Bridge] Cannot find MC Bridge channel {MC_BRIDGE_CHANNEL_ID}: {e}")
+            return web.json_response({"error": "Channel not found"}, status=500)
+
+    try:
+        await target_chan.send(f"🎮 **{player}**: {msg_cleaned}")
+        logger.info(f"[MC-Bridge] Forwarded in-game chat from [{player}]: {msg[:50]}")
+        return web.json_response({"status": "ok", "delivered": True})
+    except Exception as e:
+        logger.error(f"[MC-Bridge] Error sending message to Discord: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
 async def _mc_health_handler(request):
     """GET /api/health - Health check endpoint."""
     return web.json_response({"status": "ok", "queue_size": len(_mc_message_queue)})
@@ -1781,6 +1820,7 @@ async def start_mc_bridge_server():
     app = web.Application()
     app.router.add_get("/api/discord-messages/latest", _mc_polling_handler)
     app.router.add_get("/api/health", _mc_health_handler)
+    app.router.add_post("/api/minecraft-messages", _mc_incoming_message_handler)
     app.router.add_get("/ws/server-stats", _ws_server_stats_handler)
     app.router.add_get("/api/server-stats", _server_stats_api_handler)
     
