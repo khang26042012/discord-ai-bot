@@ -28,16 +28,16 @@ topics:
       Tên server: KhangSMP
 
       Địa chỉ IP (Java & Bedrock):
-      secrets
+      ripple.pikamc.vn
 
       Port:
-      secrets
+      Java: 25565 (mặc định) | Bedrock/PE: 25084
 
       Phiên bản hỗ trợ:
-      Minecraft 1.16 trở lên (hỗ trợ cả Java và Bedrock)
+      Minecraft Java 1.16 trở lên + Bedrock/PE (qua Geyser/Floodgate)
 
       Chủ server / Owner / Admin:
-      Phan Trọng Khang (đang sinh sống tại Vĩnh Long)
+      Phan Trọng Khang (sinh sống tại Vĩnh Long)
 
       Discord chính thức:
       https://discord.gg/4afmVDmy2
@@ -60,35 +60,32 @@ topics:
       - hướng dẫn
       - chơi như thế nào
       - kit
+      - mới vào
 
     title: Hướng dẫn người chơi mới
 
     content: |
-      Khi mới vào server bạn sẽ xuất hiện tại Spawn (khu vực trung tâm, không có NPC).
+      Khi mới vào server lần đầu, bạn sẽ nhận được:
+      - Chào mừng trang trọng toàn server + pháo hoa
+      - Hướng dẫn lệnh hữu ích gửi riêng
 
-      Hướng dẫn từng bước:
+      Bảo vệ tân thủ (60 phút đầu):
+      - Bạn KHÔNG thể bị PvP trong 60 phút đầu tiên
+      - Dùng /baove để xem thời gian bảo vệ còn lại
 
-      1. Nhận kit tân thủ:
-         /kit newbie
-
-      2. Đi ra khỏi vùng an toàn (đánh dấu bằng len đỏ) để bắt đầu sinh tồn.
-         Hoặc dùng /rtp để dịch chuyển ngẫu nhiên.
-
-      3. Tìm vị trí phù hợp rồi xây nhà.
-
-      4. Dùng Xẻng Vàng Claim đất ngay sau khi xây nhà.
-
-      5. Đặt Home:
-         /sethome
-
-      6. Tham gia Discord để nhận hỗ trợ:
-         https://discord.gg/4afmVDmy2
+      Bước bắt đầu:
+      1. Dùng /redeem denbu2 và /redeem denbu3 để nhận quà tân thủ + 800 claim blocks
+      2. Dùng /rtp để dịch chuyển ngẫu nhiên ra ngoài Spawn
+      3. Xây nhà, dùng Xẻng Vàng Claim đất để bảo vệ
+      4. Đặt /sethome để về nhà nhanh
+      5. Gõ /daily để nhận quà hằng ngày (Kim Cương, Tiền, Táo Vàng...)
+      6. Mở /menu để xem tất cả tính năng
 
       Lưu ý quan trọng:
-      - Giới hạn Claim: tối đa 1000 claim blocks
+      - Claim blocks ban đầu: 800 (từ redeem) + tích lũy theo thời gian chơi
       - Rank chỉ do Admin cấp, không thể mua
-      - Server có Keep Inventory (không mất đồ khi chết)
-      - Cooldown các lệnh dịch chuyển: 3 giây
+      - Server KHÔNG có Keep Inventory (cẩn thận khi chết!)
+      - Cooldown lệnh dịch chuyển: 3 giây
 
   # ==================================================
   # 3. CÁC LỆNH CƠ BẢN
@@ -100,10 +97,14 @@ topics:
       - commands
       - lệnh
       - help
+      - lệnh gì
 
     title: Các lệnh cơ bản
 
     content: |
+      === Menu chính ===
+      /menu             - Mở bảng điều khiển nhanh (GUI)
+
       === Dịch chuyển ===
       /spawn            - Về Spawn
       /rtp              - Dịch chuyển ngẫu nhiên (Overworld)
@@ -116,17 +117,17 @@ topics:
       === TPA ===
       /tpa <tên>        - Gửi yêu cầu dịch chuyển
       /tpaccept         - Chấp nhận
-      /tpdeny                 - Từ chối
+      /tpdeny           - Từ chối
 
-      === Chat & Tiện ích ===
+      === Tiện ích ===
       /msg <tên>        - Nhắn tin riêng
       /reply            - Trả lời người vừa nhắn
-      /ignore <tên>     - Chặn/Bỏ chặn tin nhắn
-      /nightvision on   - Bật hiệu ứng nhìn trong đêm
-      /nightvision off  - Tắt hiệu ứng nhìn trong đêm
-      /kit newbie       - Nhận bộ đồ khởi đầu
-
-      Lưu ý: Hầu hết lệnh dịch chuyển có cooldown 3 giây.
+      /daily            - Nhận quà hằng ngày
+      /tx               - Sòng bạc Tài Xỉu 1 chạm
+      /baove            - Xem trạng thái bảo vệ tân thủ
+      /report <tên> <lý do> - Báo cáo người vi phạm
+      /timber           - Bật/tắt chặt cả cây 1 nhát
+      /sb               - Bật/tắt bảng điểm Scoreboard
 
   # ==================================================
   # 4. CLAIM ĐẤT
@@ -141,36 +142,30 @@ topics:
       - golden shovel
       - bảo vệ đất
       - claimslist
+      - claim block
 
     title: Claim đất (GriefPrevention)
 
     content: |
-      Server sử dụng plugin GriefPrevention.
+      Server sử dụng plugin GriefPrevention để bảo vệ đất đai.
 
       Cách tạo Claim:
-      - Cầm Xẻng Vàng
+      - Cầm Xẻng Vàng (Golden Shovel)
       - Chuột phải vào hai góc đối diện của khu vực cần bảo vệ
 
-      Cách mở rộng Claim:
-      - Dùng Xẻng Vàng chuột phải vào cạnh Claim hiện có
+      Claim Blocks:
+      - Nhận 800 blocks từ /redeem denbu2 + /redeem denbu3
+      - Tích lũy thêm theo thời gian chơi online
 
-      Giới hạn:
-      - Mỗi người chơi tối đa 1000 claim blocks
-      - Không thể Claim chồng lên Claim của người khác
-      - Không thể Claim trong vùng cấm (Spawn và một số khu vực đặc biệt)
-
-      Kiểm tra số Claim blocks còn lại:
-      /claimslist
-      (Hiển thị số blocks đã dùng, còn lại và danh sách claim)
-
-      Các lệnh quản lý quyền:
+      Các lệnh quản lý:
       /trust <tên>           - Cho phép xây dựng
-      /untrust <tên>         - Thu hồi toàn bộ quyền
-      /accesstrust <tên>     - Cho phép sử dụng cửa, nút, cần gạt
-      /containertrust <tên>  - Cho phép mở rương, lò nung...
-      /trustlist             - Xem danh sách người được cấp quyền
+      /untrust <tên>         - Thu hồi quyền
+      /accesstrust <tên>     - Cho phép dùng cửa, nút
+      /containertrust <tên>  - Cho phép mở rương
+      /trustlist             - Xem danh sách quyền
       /abandonclaim          - Xóa Claim đang đứng
-      /abandonallclaims      - Xóa toàn bộ Claim của bạn
+      /abandonallclaims      - Xóa toàn bộ Claim
+      /claimslist            - Xem số blocks đã dùng/còn lại
 
   # ==================================================
   # 5. RANK
@@ -180,85 +175,111 @@ topics:
     aliases:
       - rank
       - cấp bậc
-      - admin
-      - owner
+      - lên rank
+      - thăng cấp
 
-    title: Rank
+    title: Rank trên KhangSMP
 
     content: |
-      Hiện tại server có các rank:
-
-      • Member   - Rank mặc định
+      Các rank hiện tại:
+      • Member   - Rank mặc định khi vào server
       • Admin    - Quản trị viên
-      • Owner    - Chủ server
+      • Owner    - Chủ server (Phan Trọng Khang)
+
+      Rank đặc biệt (do Admin cấp tay):
+      Manager, Famous, Discord, Helper, TheEgg
 
       Lưu ý:
-      - Rank chỉ được Owner/Admin (Phan Trọng Khang) cấp trực tiếp
+      - Rank chỉ do Owner/Admin cấp trực tiếp
       - Không thể mua Rank bằng tiền thật hoặc tiền trong game
 
   # ==================================================
-  # 6. RTP
+  # 6. ĐIỂM DANH HẰNG NGÀY
   # ==================================================
 
-  - id: rtp
+  - id: daily
     aliases:
-      - rtp
-      - nether
-      - teleport
-      - dịch chuyển
+      - daily
+      - điểm danh
+      - quà ngày
+      - quà hằng ngày
+      - quangay
+      - diemdanh
+      - nhận quà hàng ngày
 
-    title: RTP
+    title: Điểm Danh Hằng Ngày (/daily)
 
     content: |
-      /rtp
-      - Dịch chuyển ngẫu nhiên trong Overworld
-      - Có thể dùng ở bất kỳ đâu trong Overworld
-      - Không nên dùng tại Nether hoặc The End (vị trí ngẫu nhiên rất nguy hiểm)
-      - Có cooldown 3 giây
+      Mỗi 24 giờ bạn có thể nhận quà miễn phí một lần.
 
-      Sau khi RTP hoặc tìm được vị trí đẹp, hãy Claim đất ngay.
+      Cách nhận:
+      - /daily hoặc /quangay hoặc /diemdanh
+      - Hoặc mở /menu → bấm icon Rương 🎁
+
+      Quà nhận được mỗi ngày:
+      - +10,000$ tiền mặt
+      - 5 Kim Cương
+      - 3 Táo Vàng Enchant
+      - 16 Tên Lửa (Firework Rocket)
+      - 16 Thịt Bò Nướng
 
   # ==================================================
-  # 7. HOME
+  # 7. TÀI XỈU (SÒNG BẠC)
   # ==================================================
 
-  - id: home
+  - id: taixiu
     aliases:
-      - home
-      - sethome
-      - delhome
-      - homes
-      - homelist
+      - tài xỉu
+      - taixiu
+      - tx
+      - cá cược
+      - sòng bạc
+      - cờ bạc
+      - xúc xắc
+      - đặt cược
 
-    title: Home
+    title: Sòng Bạc Tài Xỉu (/tx)
 
     content: |
-      /sethome [tên]   - Đặt Home
-      /home [tên]      - Dịch chuyển về Home
-      /delhome [tên]   - Xóa Home
-      /homes           - Xem danh sách tất cả Home
+      Mini-game cá cược xúc xắc 1 chạm, cực dễ chơi.
 
-      Hiện tại server không giới hạn số lượng Home.
-      Lệnh /home và /sethome có cooldown 3 giây.
+      Cách chơi:
+      1. Gõ /tx hoặc mở /menu → icon Vàng 🎲
+      2. Chọn mức tiền cược (1K đến TẤT TAY)
+      3. Bấm ĐẶT TÀI (đỏ) hoặc ĐẶT XỈU (xanh)
+      4. Chờ 10 giây đếm ngược xem Action Bar
+      5. Kết quả hiện to giữa màn hình!
+
+      Luật chơi:
+      - TÀI: Tổng 3 xúc xắc từ 11-18 điểm
+      - XỈU: Tổng 3 xúc xắc từ 3-10 điểm
+      - Tỉ lệ thắng: 1 ăn 1.8 (đã trừ 10% thuế nhà cái)
+      - Giới hạn: mỗi người tối đa 1 lần / 2 giờ
 
   # ==================================================
-  # 8. TPA
+  # 8. BẢO VỆ TÂN THỦ
   # ==================================================
 
-  - id: tpa
+  - id: newbie_protection
     aliases:
-      - tpa
-      - tpaccept
-      - tpdeny
+      - bảo vệ tân thủ
+      - baove
+      - protection
+      - miễn pvp
+      - không bị đánh
+      - pvp mới vào
 
-    title: TPA
+    title: Bảo Vệ Tân Thủ (/baove)
 
     content: |
-      /tpa <tên người chơi>   - Gửi yêu cầu dịch chuyển
-      /tpaccept               - Chấp nhận yêu cầu
-      /tpdeny                 - Từ chối yêu cầu
+      Khi lần đầu vào KhangSMP, được bảo vệ hoàn toàn khỏi PvP trong 60 phút.
 
-      Có cooldown 3 giây.
+      Trong thời gian bảo vệ:
+      - Không ai gây sát thương được cho bạn
+      - Bạn cũng không thể tấn công người khác
+
+      Xem trạng thái:
+      /baove hoặc /protection hoặc /newbie
 
   # ==================================================
   # 9. PVP
@@ -269,20 +290,82 @@ topics:
       - pvp
       - đánh nhau
       - combat
+      - bị giết
+      - pk
 
     title: PvP
 
     content: |
-      Server có bật PvP.
+      Server có bật PvP ngoài vùng Spawn.
 
       Quy tắc:
-      - Chỉ được PvP ở ngoài vùng Lobby (Spawn)
-      - Không được PvP trong Home của người khác nếu chưa dính combat
-      - Nếu đã dính PvP ở ngoài rồi chạy vào Home của người khác thì vẫn tính combat
-      - Ở trong Home mà chưa dính PvP từ trước thì không thể bắt đầu PvP
+      - Không được PvP trong khu vực Spawn
+      - Không được PvP trong Claim của người khác
+      - Tân thủ mới vào được bảo vệ 60 phút đầu
+      - Bắt nạt tân thủ sẽ bị xử lý theo nội quy
 
   # ==================================================
-  # 10. FAQ - CÂU HỎI THƯỜNG GẶP
+  # 10. CHẶT CÂY NHANH (TIMBER)
+  # ==================================================
+
+  - id: timber
+    aliases:
+      - timber
+      - chặt cây
+      - chặt nhanh
+      - chatcay
+      - cưa cây
+
+    title: Chặt Cây Nhanh (/timber)
+
+    content: |
+      Chặt cả cây chỉ bằng 1 nhát rìu (tối đa 30 block gỗ).
+      Rìu hao mòn tương ứng với số gỗ bị phá.
+
+      Bật/tắt: /timber hoặc /chatcay
+
+  # ==================================================
+  # 11. BÁO CÁO VI PHẠM
+  # ==================================================
+
+  - id: report
+    aliases:
+      - report
+      - báo cáo
+      - tố cáo
+      - vi phạm
+
+    title: Báo Cáo Vi Phạm (/report)
+
+    content: |
+      /report <tên người chơi> <lý do>
+
+      Ví dụ: /report PE_xxx hack speed
+
+      Thông báo ngay đến Admin online, được lưu lại để Admin xem bằng /reports.
+
+  # ==================================================
+  # 12. REDEEM CODE
+  # ==================================================
+
+  - id: redeem
+    aliases:
+      - redeem
+      - code
+      - mã thưởng
+      - denbu
+      - quà code
+
+    title: Redeem Code (Mã Thưởng)
+
+    content: |
+      /redeem denbu2 - 32 Kim Cương, 4 Netherite Scrap, 3 Táo Vàng, 64 Tên Lửa, 30 Level, +50,000$
+      /redeem denbu3 - +800 Claim Blocks
+
+      Mỗi code chỉ dùng 1 lần / người. Theo dõi Discord để nhận code mới.
+
+  # ==================================================
+  # 13. FAQ
   # ==================================================
 
   - id: faq
@@ -291,6 +374,7 @@ topics:
       - câu hỏi thường gặp
       - lỗi
       - không được
+      - tại sao
 
     title: FAQ - Câu hỏi thường gặp
 
@@ -299,26 +383,25 @@ topics:
       → Bạn đang ở Spawn hoặc trong Claim của người khác.
 
       Không mở được rương / cửa?
-      → Bạn chưa được chủ Claim cấp quyền (/containertrust hoặc /accesstrust).
+      → Chưa được chủ Claim cấp quyền /containertrust hoặc /accesstrust.
 
       Không Claim được?
-      → Có thể do: đang ở vùng cấm, Claim bị chồng, hoặc đã hết 1000 claim blocks.
-      → Kiểm tra bằng lệnh: /claimslist
+      → Claim bị chồng, ở vùng cấm, hoặc hết claim blocks. Kiểm tra: /claimslist
 
       Có mất đồ khi chết không?
-      → Không. Server có Keep Inventory.
+      → CÓ. Server KHÔNG có Keep Inventory. Hãy cẩn thận!
 
-      Làm sao về Spawn?
-      → /spawn
+      Bị người khác đánh khi mới vào?
+      → /baove để xem thời gian bảo vệ tân thủ còn lại.
 
-      RTP dùng ở đâu?
-      → Chỉ nên dùng ở Overworld. Không nên dùng ở Nether/End.
+      Shop ở đâu?
+      → Chưa có NPC Shop. Dùng /tx để chơi Tài Xỉu kiếm tiền!
 
-      Cần hỗ trợ thêm?
-      → Tham gia Discord: https://discord.gg/4afmVDmy2
+      Cần hỗ trợ?
+      → Discord: https://discord.gg/4afmVDmy2
 
   # ==================================================
-  # 11. NỘI QUY
+  # 14. NỘI QUY
   # ==================================================
 
   - id: rules
@@ -328,25 +411,23 @@ topics:
       - hack
       - cheat
       - vi phạm
+      - cấm
 
     title: Nội quy Server
 
     content: |
-      Nghiêm cấm các hành vi sau:
-
-      • Sử dụng Hack / Cheat / Client bất hợp pháp
-      • Bug Abuse (lợi dụng lỗi)
-      • Duplication (nhân bản vật phẩm)
-      • Grief (phá hoại công trình người khác)
-      • Spam chat
+      Nghiêm cấm:
+      • Hack / Cheat / Client bất hợp pháp
+      • Bug Abuse, Duplication, Grief
+      • Spam chat, chửi thề tục tĩu (bị Thiên Kiếp Sấm Sét 1 phút!)
       • Quảng cáo server khác
-      • Phá hoại trải nghiệm của người chơi khác
-      • Lừa đảo, chiếm đoạt tài sản người khác
+      • Bắt nạt tân thủ / người mới
+      • Lừa đảo, chiếm đoạt tài sản
 
-      Vi phạm sẽ bị xử lý tùy theo mức độ nghiêm trọng (cảnh cáo, mute, kick, ban).
+      Vi phạm: cảnh cáo → mute → kick → ban.
 
   # ==================================================
-  # 12. LIÊN HỆ
+  # 15. LIÊN HỆ
   # ==================================================
 
   - id: contact
@@ -360,36 +441,12 @@ topics:
     title: Liên hệ & Hỗ trợ
 
     content: |
-      Discord chính thức (khuyến nghị):
-      https://discord.gg/4afmVDmy2
-
-      Chủ server:
-      Phan Trọng Khang
-
-      TikTok:
-      @phantrongkhangg
-
-  # ==================================================
-  # 13. BẢO TRÌ & CẬP NHẬT
-  # ==================================================
-
-  - id: maintenance
-    aliases:
-      - bảo trì
-      - maintenance
-      - update
-      - cập nhật
-      - sự kiện
-
-    title: Bảo trì & Cập nhật
-
-    content: |
-      Mọi thông báo về bảo trì, cập nhật phiên bản, sự kiện đều được đăng trên Discord chính thức.
-
       Discord: https://discord.gg/4afmVDmy2
+      Chủ server: Phan Trọng Khang
+      TikTok: @phantrongkhangg
 
   # ==================================================
-  # 14. DANH SÁCH PLUGIN
+  # 16. PLUGIN
   # ==================================================
 
   - id: plugins
@@ -401,112 +458,62 @@ topics:
     title: Plugin đang sử dụng
 
     content: |
-      Essentials
-      BetterRTP
-      GriefPrevention
-      LuckPerms
-      Vault
-      WorldEdit
-      WorldGuard
-      Geyser
-      Floodgate
-      ViaVersion
-      PlaceholderAPI
-      EntityClearer
-      Chunky
-      TAB
-      Spark
-      SkBee
-      GrimAC
-      RideOnHead
-      VeinMiner
-      NightVision
+      Server Paper 1.21.4, Bedrock/PE qua Geyser + Floodgate.
+
+      Tính năng Skript tuỳ chỉnh:
+      - Tài Xỉu 1 Chạm (/tx)
+      - Điểm Danh Hằng Ngày (/daily)
+      - Bảo Vệ Tân Thủ 60 phút (/baove)
+      - Chặt Cây Nhanh (/timber)
+      - 1 Người Ngủ Qua Đêm
+      - Thiên Kiếp Sấm Sét (chống chửi thề)
+      - Báo Cáo Vi Phạm (/report)
+      - Chào Mừng Tân Thủ tự động
+      - Redeem Code (/redeem)
+
+      Plugin khác: GriefPrevention, VeinMiner, TAB, GrimAC, LuckPerms, DriveBackupV2...
 
   # ==================================================
-  # 15. VEINMINER (ĐÀO QUẶNG NHANH)
+  # 17. VEINMINER
   # ==================================================
 
   - id: veinminer
     aliases:
       - veinminer
       - đào quặng nhanh
-      - đào nhanh
       - vein mine
       - vm
 
     title: VeinMiner (Đào quặng nhanh)
 
     content: |
-      Plugin hỗ trợ phá toàn bộ dải quặng hoặc khối gỗ cùng loại trong một lần đập.
-
-      Cách sử dụng:
-      - Giữ phím Sneak (Giữ Shift / Ngồi xuống) và dùng dụng cụ phù hợp (Cúp, Rìu...) đập vào quặng/gỗ.
-
-      Lệnh cơ bản:
-      /veinminer toggle    - Bật hoặc tắt tính năng VeinMiner cho bản thân
+      Giữ Shift + dùng dụng cụ phù hợp đập vào quặng/gỗ để phá toàn bộ dải cùng loại.
+      /veinminer toggle - Bật/tắt VeinMiner
 
   # ==================================================
-  # 16. GRIMAC (CHỐNG HACK)
+  # 18. NGỒI / NẰM / CƯỠI ĐẦU
   # ==================================================
 
-  - id: grimac
+  - id: sit_ride
     aliases:
-      - grimac
-      - grim
-      - anticheat
-      - chống hack
-
-    title: GrimAC (Hệ thống chống Hack/Cheat)
-
-    content: |
-      Hệ thống tự động ngăn chặn các hành vi gian lận (hack/cheat) để bảo vệ server.
-
-  # ==================================================
-  # 17. NIGHT VISION (TẦM NHÌN ĐÊM)
-  # ==================================================
-
-  - id: nightvision
-    aliases:
-      - nightvision
-      - nv
-      - nhìn đêm
-      - tầm nhìn đêm
-      - nhìn trong tối
-
-    title: Night Vision (Tầm nhìn đêm)
-
-    content: |
-      Tính năng hỗ trợ giúp bạn nhìn rõ mọi vật trong bóng tối hoặc dưới nước mà không cần cắm đuốc.
-
-      Cách sử dụng:
-      /nightvision on   - Bật hiệu ứng nhìn trong đêm
-      /nightvision off  - Tắt hiệu ứng nhìn trong đêm
-
-  # ==================================================
-  # 18. HƯỚNG DẪN NGỒI LÊN ĐẦU NGƯỜI CHƠI
-  # ==================================================
-
-  - id: ride_guide
-    aliases:
-      - ride
-      - rideonhead
+      - ngồi
+      - nằm
+      - sit
+      - gsit
       - cưỡi đầu
-      - đội đầu
-      - hướng dẫn ngồi lên đầu
-      - cách cưỡi người chơi
-      - đè vào người chơi
+      - rideonhead
       - leo lên đầu
 
-    title: Hướng dẫn ngồi lên đầu người chơi
+    title: Ngồi, Nằm & Cưỡi Đầu
 
     content: |
-      Để ngồi hoặc cưỡi lên đầu người chơi khác trong server:
+      Ngồi / Nằm (GSit):
+      - PE: Nhấn giữ vào mặt đất để ngồi; vuốt xuống để nằm
+      - Java: Shift + Chuột phải vào mặt đất
 
-      • Điện thoại (PE / Bedrock): Nhấn giữ (đè) vào người chơi khác.
-      • Máy tính (Java / PC): Nhấn chuột phải vào người chơi khác.
+      Cưỡi lên đầu người khác:
+      - PE: Nhấn giữ vào người chơi khác
+      - Java: Chuột phải vào người chơi khác
+      - Nhấn Shift để xuống
 
-      Cách leo xuống:
-      - Nhấn phím Shift hoặc nút Ngồi xuống (Sneak) để nhảy xuống.
-
-      Lệnh cấm người khác cưỡi:
-      /ride blacklist    - Chặn/Cho phép người khác cưỡi lên đầu bạn
+      Chặn người khác cưỡi: /ride blacklist
