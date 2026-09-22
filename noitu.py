@@ -16,8 +16,38 @@ logger = logging.getLogger("NoiTuGame")
 AI_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/qwen/qwen3.7-plus:free")
 AI_API_KEY = os.getenv("ROUTER_API_KEY", "")
 AI_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
-NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID")
-NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else None
+NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID", "1547645186493120564")
+NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else 1547645186493120564
+
+# ==============================================================================
+# 📚 BỘ TỪ ĐIỂN TIẾNG VIỆT SIÊU TỐC (52.000+ TỪ)
+# ==============================================================================
+VIETNAMESE_WORDS: Set[str] = set()
+WORDS_BY_FIRST_SYLLABLE: Dict[str, List[str]] = {}
+
+def load_vietnamese_dictionary():
+    global VIETNAMESE_WORDS, WORDS_BY_FIRST_SYLLABLE
+    dict_path = os.path.join(os.path.dirname(__file__), "vietnamese_words.txt")
+    if not os.path.exists(dict_path):
+        logger.warning(f"[NoiTu] Không tìm thấy từ điển tại {dict_path}")
+        return
+
+    with open(dict_path, "r", encoding="utf-8") as f:
+        for line in f:
+            w = line.strip().lower()
+            if not w:
+                continue
+            VIETNAMESE_WORDS.add(w)
+            parts = w.split()
+            if len(parts) == 2:
+                first = parts[0]
+                if first not in WORDS_BY_FIRST_SYLLABLE:
+                    WORDS_BY_FIRST_SYLLABLE[first] = []
+                WORDS_BY_FIRST_SYLLABLE[first].append(w)
+
+    logger.info(f"[NoiTu] Loaded {len(VIETNAMESE_WORDS)} Vietnamese words, {len(WORDS_BY_FIRST_SYLLABLE)} first syllables!")
+
+load_vietnamese_dictionary()
 
 class AIClient:
     """Async AI API helper using aiohttp. Supports Groq, 9router, and OpenAI-compatible APIs."""
@@ -121,6 +151,10 @@ class AIClient:
         if not word or len(word.strip().split()) != 2:
             return False
 
+        norm = normalize_word(word)
+        if norm in VIETNAMESE_WORDS:
+            return True
+
         sys_prompt = """Bạn là trọng tài ngôn ngữ tiếng Việt.
 Nhiệm vụ: Trả lời xem cụm 2 tiếng dưới đây có phải là cách nói tự nhiên, có nghĩa thực tế mà người Việt thực sự dùng trong giao tiếp hàng ngày hay không (bao gồm từ ghép, cụm tính từ, cụm danh từ, phó từ thông dụng).
 
@@ -149,6 +183,11 @@ Trả về duy nhất JSON: {"is_real": true/false}"""
 
     async def validate_starter_phrase(self, phrase: str) -> Dict[str, Any]:
         """Validate starter phrase: 2 Vietnamese syllables."""
+        words = [clean_syllable(w) for w in phrase.strip().split() if clean_syllable(w)]
+        norm = normalize_word(phrase)
+        if norm in VIETNAMESE_WORDS and len(words) == 2:
+            return {"valid": True, "reason": "", "last_syllable": words[1]}
+
         sys_prompt = """Bạn là trọng tài trò chơi Nối Từ Tiếng Việt.
 Nhiệm vụ: Kiểm tra cụm từ ra đề của người chơi.
 YÊU CẦU BẮT BUỘC:
@@ -187,11 +226,26 @@ YÊU CẦU BẮT BUỘC:
 
     async def validate_and_next_singleplayer(self, current_word: str, expected_first_syllable: str, used_words: Set[str], is_starter: bool = False) -> Dict[str, Any]:
         """Validate player word and generate AI response for Singleplayer mode."""
+        clean_exp_first = clean_syllable(expected_first_syllable)
+
+        # FAST PATH: Chọn từ trong từ điển cục bộ (0.01s, 100% chuẩn xác không ảo giác)
+        candidates = WORDS_BY_FIRST_SYLLABLE.get(clean_exp_first, [])
+        norm_cur = normalize_word(current_word)
+        available = [c for c in candidates if normalize_word(c) not in used_words and normalize_word(c) != norm_cur]
+        if available:
+            chosen = random.choice(available)
+            chosen_parts = chosen.split()
+            return {
+                "valid": True,
+                "reason": "",
+                "ai_word": chosen,
+                "ai_last_syllable": clean_syllable(chosen_parts[1])
+            }
+
         recent_used = list(used_words)
         if len(recent_used) > 60:
-            recent_used = recent_used[-60:]  # chỉ gửi 60 từ gần nhất vào prompt, tránh phình token
+            recent_used = recent_used[-60:]
         used_list_str = ", ".join(recent_used)
-        clean_exp_first = clean_syllable(expected_first_syllable)
         
         if is_starter:
             sys_prompt = f"""Bạn là đối thủ trò chơi Nối Từ Tiếng Việt.
@@ -303,6 +357,15 @@ Trả về duy nhất JSON:
 
     async def validate_multiplayer_word(self, current_word: str, expected_first_syllable: str, used_words: Set[str]) -> Dict[str, Any]:
         """Validate player word in Multiplayer mode."""
+        clean_exp_first = clean_syllable(expected_first_syllable)
+        words = [clean_syllable(w) for w in current_word.strip().split() if clean_syllable(w)]
+        norm = normalize_word(current_word)
+
+        # FAST PATH: Kiểm tra từ điển cục bộ siêu tốc (0.01s, 100% chuẩn)
+        if norm in VIETNAMESE_WORDS:
+            if len(words) == 2 and words[0] == clean_exp_first:
+                return {"valid": True, "reason": "", "last_syllable": words[1]}
+
         recent_used = list(used_words)
         if len(recent_used) > 60:
             recent_used = recent_used[-60:]
@@ -513,6 +576,22 @@ async def start_noitu_game(interaction: discord.Interaction):
         rearm_timer(state, multiplayer_timeout_handler(interaction.channel, state, starter_id))
 
 
+async def stop_noitu_game(interaction: discord.Interaction):
+    """Handler for /noitu stop slash command."""
+    channel_id = interaction.channel_id
+    state = game_states.get(channel_id)
+    if not state or state.status == "ENDED":
+        await interaction.response.send_message("❌ Không có ván chơi Nối Từ nào đang chạy trong kênh này!", ephemeral=True)
+        return
+
+    state.status = "ENDED"
+    if state.timer_task and not state.timer_task.done():
+        state.timer_task.cancel()
+    game_states.pop(channel_id, None)
+
+    await interaction.response.send_message(f"🛑 {interaction.user.mention} đã dừng ván chơi Nối Từ.")
+
+
 async def singleplayer_timeout_handler(channel: discord.TextChannel, state: NoiTuGameState, user_id: int):
     """Timeout handler for singleplayer mode (20 seconds)."""
     try:
@@ -542,18 +621,20 @@ async def multiplayer_timeout_handler(channel: discord.TextChannel, state: NoiTu
                 "reason": "Quá 20 giây"
             })
             if user_id in state.players:
+                elim_idx = state.players.index(user_id)
                 state.players.remove(user_id)
 
-            # Check remaining players
-            if len(state.players) == 1:
-                winner_id = state.players[0]
-                await finish_game(channel, state, winner_text=f"<@{winner_id}>")
-            elif len(state.players) == 0:
-                await finish_game(channel, state, winner_text="Không có ai")
-            else:
-                # Next player's turn
-                if state.turn_index >= len(state.players):
-                    state.turn_index = 0
+                # Check remaining players
+                if len(state.players) == 1:
+                    winner_id = state.players[0]
+                    await finish_game(channel, state, winner_text=f"<@{winner_id}>")
+                    return
+                elif len(state.players) == 0:
+                    await finish_game(channel, state, winner_text="Không có ai")
+                    return
+
+                # Next player's turn - chuyển chuẩn xác sang người kế tiếp
+                state.turn_index = elim_idx % len(state.players)
                 next_user_id = state.players[state.turn_index]
                 state.current_turn_user_id = next_user_id
 
@@ -796,27 +877,7 @@ async def handle_noitu_message(message: discord.Message):
 
                 if elim_reason:
                     await message.add_reaction("❌")
-                    await message.channel.send(f"❌ <@{message.author.id}> nối từ sai ({elim_reason})! <@{message.author.id}> BỊ LOẠI!")
-
-                    state.eliminated_players.append({
-                        "user_id": message.author.id,
-                        "order": len(state.eliminated_players) + 1,
-                        "reason": elim_reason
-                    })
-                    if message.author.id in state.players:
-                        state.players.remove(message.author.id)
-
-                    if len(state.players) == 1:
-                        await finish_game(message.channel, state, winner_text=f"<@{state.players[0]}>")
-                    elif len(state.players) == 0:
-                        await finish_game(message.channel, state, winner_text="Không có ai")
-                    else:
-                        if state.turn_index >= len(state.players):
-                            state.turn_index = 0
-                        next_user_id = state.players[state.turn_index]
-                        state.current_turn_user_id = next_user_id
-                        await message.channel.send(f"👉 Tới lượt <@{next_user_id}>! Cần nối bằng từ bắt đầu bằng **'{state.last_syllable}'** (Có 20 giây)")
-                        rearm_timer(state, multiplayer_timeout_handler(message.channel, state, next_user_id))
+                    await message.reply(f"❌ {message.author.mention} {elim_reason}! Hãy thử lại từ khác nhanh nào (vẫn tính thời gian).")
                     return
 
                 await message.add_reaction("✅")

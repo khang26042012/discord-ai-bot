@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from discord.ui import View, Button, Modal, TextInput
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Set
 # motor.motor_asyncio removed - using JSON file storage instead
-from noitu import start_noitu_game, handle_noitu_message
+from noitu import start_noitu_game, handle_noitu_message, stop_noitu_game
 import yaml
 import unicodedata
 from aiohttp import web
@@ -245,6 +245,20 @@ async def on_ready():
     except Exception as e:
         logger.error(f"[MC-Bridge] Failed to start REST API server: {e}")
 
+    # Dọn dẹp phòng voice tự động mồ côi khi bot khởi động
+    try:
+        voice_cat = bot.get_channel(VOICE_CATEGORY_ID)
+        if voice_cat and hasattr(voice_cat, "voice_channels"):
+            for vc in voice_cat.voice_channels:
+                if vc.id != AUTO_VOICE_CREATOR_ID and vc.name.startswith("🔊・Phòng của "):
+                    if len(vc.members) == 0:
+                        await vc.delete(reason="Dọn dẹp phòng voice mồ côi khi bot khởi động")
+                        logger.info(f"[AutoVoice] Cleaned orphan voice room: {vc.name}")
+                    else:
+                        temp_voice_rooms.add(vc.id)
+    except Exception as e:
+        logger.error(f"[AutoVoice] Startup orphan cleanup error: {e}")
+
 @bot.event
 async def on_member_join(member):
     channel = bot.get_channel(WELCOME_CHANNEL_ID)
@@ -256,6 +270,49 @@ async def on_member_remove(member):
     channel = bot.get_channel(SEE_YOU_CHANNEL_ID)
     if channel is not None:
         await channel.send(f"Xin lỗi {member.mention}! Tôi đã không giữ chân bạn được, cảm ơn bạn đã đồng hành cùng server! Nếu có duyên chúng ta sẽ gặp lại")
+
+# ==============================================================================
+# 🎧 AUTO VOICE ROOM ENGINE (TỰ ĐỘNG TẠO VÀ DỌN DẸP PHÒNG VOICE)
+# ==============================================================================
+AUTO_VOICE_CREATOR_ID = int(os.getenv("AUTO_VOICE_CREATOR_ID", "1547620820166254612")) # ➕・𝐭𝐚𝐨-𝐫𝐨𝐨𝐦
+VOICE_CATEGORY_ID = int(os.getenv("VOICE_CATEGORY_ID", "1547608249526779965"))       # 🎧・𝐕𝐎𝐈𝐂𝐄
+temp_voice_rooms: Set[int] = set()
+
+@bot.event
+async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    # 1. Người chơi tham gia kênh tạo phòng (➕・𝐭𝐚𝐨-𝐫𝐨𝐨𝐦)
+    if after.channel and after.channel.id == AUTO_VOICE_CREATOR_ID:
+        guild = member.guild
+        category = after.channel.category or guild.get_channel(VOICE_CATEGORY_ID)
+        room_name = f"🔊・Phòng của {member.display_name}"
+
+        try:
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(connect=True, speak=True, view_channel=True),
+                member: discord.PermissionOverwrite(connect=True, speak=True, view_channel=True, manage_channels=True, move_members=True)
+            }
+            new_channel = await guild.create_voice_channel(
+                name=room_name,
+                category=category,
+                overwrites=overwrites,
+                bitrate=64000,
+                reason=f"Auto Voice Room cho {member.display_name}"
+            )
+            temp_voice_rooms.add(new_channel.id)
+            await member.move_to(new_channel)
+            logger.info(f"[AutoVoice] Đã tạo {room_name} ({new_channel.id}) và chuyển {member.display_name}")
+        except Exception as e:
+            logger.error(f"[AutoVoice] Lỗi tạo phòng cho {member.display_name}: {e}")
+
+    # 2. Người chơi rời phòng -> Kiểm tra nếu phòng tạm thời trống thì tự động xóa
+    if before.channel and (before.channel.id in temp_voice_rooms or before.channel.name.startswith("🔊・Phòng của ")):
+        if before.channel.id != AUTO_VOICE_CREATOR_ID and len(before.channel.members) == 0:
+            try:
+                temp_voice_rooms.discard(before.channel.id)
+                await before.channel.delete(reason="Phòng voice tự động xóa khi trống người")
+                logger.info(f"[AutoVoice] Đã xóa phòng voice tạm thời {before.channel.name}")
+            except Exception as e:
+                logger.error(f"[AutoVoice] Lỗi xóa phòng trống {before.channel.name}: {e}")
 
 # ==============================================================================
 # 🎯 TASK EXECUTION ENGINE (!@tenbot) — ĐIỀU HÀNH NHIỆM VỤ ĐẶC NHIỆM TOÀN SERVER
@@ -818,6 +875,10 @@ noitu_group = discord.app_commands.Group(name="noitu", description="Các lệnh 
 @noitu_group.command(name="start", description="Bắt đầu ván chơi Nối Từ Tiếng Việt")
 async def noitu_start_slash(interaction: discord.Interaction):
     await start_noitu_game(interaction)
+
+@noitu_group.command(name="stop", description="Dừng ván chơi Nối Từ đang diễn ra trong kênh")
+async def noitu_stop_slash(interaction: discord.Interaction):
+    await stop_noitu_game(interaction)
 
 bot.tree.add_command(noitu_group)
 
