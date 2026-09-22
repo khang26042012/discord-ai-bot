@@ -254,6 +254,227 @@ async def on_member_remove(member):
     if channel is not None:
         await channel.send(f"Xin lỗi {member.mention}! Tôi đã không giữ chân bạn được, cảm ơn bạn đã đồng hành cùng server! Nếu có duyên chúng ta sẽ gặp lại")
 
+# ==============================================================================
+# 🎯 TASK EXECUTION ENGINE (!@tenbot) — ĐIỀU HÀNH NHIỆM VỤ ĐẶC NHIỆM TOÀN SERVER
+# ==============================================================================
+
+async def handle_bot_task_command(message: discord.Message):
+    """
+    Xử lý lệnh điều hành nhiệm vụ cấp cao (!@tenbot <task>) trên TẤT CẢ các kênh.
+    ĐÁNH GIÁ NGUY HIỂM & BẢO MẬT ĐA TẦNG:
+    - Cấp 1 (Chủ tối cao): khangmc_vn hoặc Guild Owner.
+    - Cấp 2 (Quản trị viên): Administrator, Manage Channels, Manage Guild, Manage Messages.
+    - Cấp 3 (Thành viên thường): Tuyệt đối từ chối các lệnh can thiệp hệ thống/kênh.
+    """
+    content = message.content.strip()
+    raw = content[2:].strip()
+    
+    # Bóc tách mention bot nếu có (<@!id> hoặc <@id>)
+    if bot.user:
+        raw = re.sub(rf"^<@!?{bot.user.id}>\s*", "", raw, flags=re.IGNORECASE)
+    
+    # Bóc tách tên gọi của bot
+    raw = re.sub(r"^(?:jet\s+jet(?:\s+bi\s+sun\s+rang)?|jetjet|jet\b|bot\b)\s*[:,\-]?\s*", "", raw, flags=re.IGNORECASE).strip()
+    
+    if not raw:
+        await message.reply("🐭 Dạ Jet Jet nghe đây! Anh/bạn muốn giao nhiệm vụ gì cho em ạ? (Ví dụ: `!@Jet Jet lock channel`, `!@Jet Jet unlock channel`, `!@Jet Jet slowmode 10s`, `!@Jet Jet clear 20`...)")
+        return
+
+    author = message.author
+    guild = message.guild
+    
+    # Xác thực phân quyền đa tầng
+    is_master = False
+    is_admin = False
+    
+    if str(author.name).lower() == "khangmc_vn" or (guild and guild.owner_id == author.id):
+        is_master = True
+        is_admin = True
+    elif isinstance(author, discord.Member):
+        perms = author.guild_permissions
+        if perms.administrator or perms.manage_channels or perms.manage_guild or perms.manage_messages:
+            is_admin = True
+
+    logger.info(f"[Task-Engine] '{author.name}' (Master={is_master}, Admin={is_admin}) in #{message.channel.name}: {raw[:100]}")
+    raw_lower = raw.lower()
+
+    # --- 1. LỆNH NGUY HIỂM: LOCK CHANNEL (KHÓA KÊNH) ---
+    if re.search(r"\b(lock\s*channel|khoa\s*kenh|khóa\s*kênh|lock\b|khoa\b)", raw_lower):
+        if not is_admin:
+            await message.reply("⛔ **Từ chối truy cập:** Bạn không có quyền quản trị kênh để thực hiện lệnh khóa kênh!")
+            return
+        
+        target_channel = message.channel_mentions[0] if message.channel_mentions else message.channel
+        try:
+            overwrite = target_channel.overwrites_for(guild.default_role)
+            overwrite.send_messages = False
+            overwrite.send_messages_in_threads = False
+            overwrite.add_reactions = False
+            await target_channel.set_permissions(guild.default_role, overwrite=overwrite)
+            
+            embed = discord.Embed(
+                title="🔒 KÊNH ĐÃ ĐƯỢC TẠM KHÓA",
+                description=f"Kênh {target_channel.mention} đã được tạm thời khóa bởi {author.mention}.\nThành viên thường tạm thời không thể gửi tin nhắn.",
+                color=0xe74c3c,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_footer(text="Hệ thống Quản trị KhangSMP", icon_url=bot.user.display_avatar.url if bot.user else None)
+            await message.channel.send(embed=embed)
+        except Exception as e:
+            logger.error(f"[Task-Engine] Lock error: {e}")
+            await message.reply(f"❌ Không thể khóa kênh: `{str(e)[:100]}` (Vui lòng kiểm tra quyền Bot trong Server Role)")
+        return
+
+    # --- 2. LỆNH NGUY HIỂM: UNLOCK CHANNEL (MỞ KHÓA KÊNH) ---
+    if re.search(r"\b(unlock\s*channel|mo\s*khoa|mở\s*khóa|unlock\b)", raw_lower):
+        if not is_admin:
+            await message.reply("⛔ **Từ chối truy cập:** Bạn không có quyền quản trị kênh để thực hiện lệnh mở khóa kênh!")
+            return
+            
+        target_channel = message.channel_mentions[0] if message.channel_mentions else message.channel
+        try:
+            overwrite = target_channel.overwrites_for(guild.default_role)
+            overwrite.send_messages = True
+            overwrite.send_messages_in_threads = True
+            overwrite.add_reactions = True
+            await target_channel.set_permissions(guild.default_role, overwrite=overwrite)
+            
+            embed = discord.Embed(
+                title="🔓 KÊNH ĐÃ ĐƯỢC MỞ KHÓA",
+                description=f"Kênh {target_channel.mention} đã được mở khóa bởi {author.mention}.\nAnh em cư dân có thể tiếp tục trò chuyện bình thường!",
+                color=0x2ecc71,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_footer(text="Hệ thống Quản trị KhangSMP", icon_url=bot.user.display_avatar.url if bot.user else None)
+            await message.channel.send(embed=embed)
+        except Exception as e:
+            logger.error(f"[Task-Engine] Unlock error: {e}")
+            await message.reply(f"❌ Không thể mở khóa kênh: `{str(e)[:100]}`")
+        return
+
+    # --- 3. LỆNH NGUY HIỂM: SLOWMODE (CHẾ ĐỘ CHẬM) ---
+    if "slowmode" in raw_lower or "chế độ chậm" in raw_lower or "che do cham" in raw_lower:
+        if not is_admin:
+            await message.reply("⛔ **Từ chối truy cập:** Bạn không có quyền cài đặt chế độ chậm cho kênh!")
+            return
+        
+        target_channel = message.channel_mentions[0] if message.channel_mentions else message.channel
+        match_sec = re.search(r"(\d+)\s*(?:s|giây|giay|m|phút|phut)?", raw_lower)
+        seconds = 0
+        if "tắt" in raw_lower or "tat" in raw_lower or "off" in raw_lower:
+            seconds = 0
+        elif match_sec:
+            val = int(match_sec.group(1))
+            if "m" in match_sec.group(0) or "phút" in raw_lower or "phut" in raw_lower:
+                seconds = val * 60
+            else:
+                seconds = val
+        seconds = max(0, min(21600, seconds))
+        
+        try:
+            await target_channel.edit(slowmode_delay=seconds)
+            if seconds > 0:
+                await message.channel.send(f"⏱️ Đã đặt chế độ chậm cho {target_channel.mention}: **{seconds} giây/tin nhắn**.")
+            else:
+                await message.channel.send(f"⏱️ Đã **tắt** chế độ chậm cho {target_channel.mention}.")
+        except Exception as e:
+            await message.reply(f"❌ Không thể chỉnh slowmode: `{str(e)[:100]}`")
+        return
+
+    # --- 4. LỆNH NGUY HIỂM: PURGE / CLEAR TIN NHẮN ---
+    if re.search(r"\b(clear|purge|xoa\s*tin|xóa\s*tin|don\s*dep|dọn\s*dẹp)\b", raw_lower):
+        if not is_admin:
+            await message.reply("⛔ **Từ chối truy cập:** Bạn không có quyền xóa tin nhắn!")
+            return
+        
+        match_num = re.search(r"(\d+)", raw)
+        count = int(match_num.group(1)) if match_num else 10
+        count = max(1, min(100, count))
+        
+        try:
+            deleted = await message.channel.purge(limit=count + 1)
+            notice = await message.channel.send(f"🧹 Đã dọn dẹp sạch sẽ **{len(deleted)-1}** tin nhắn theo lệnh của {author.mention}!")
+            await asyncio.sleep(5)
+            await notice.delete()
+        except Exception as e:
+            await message.reply(f"❌ Không thể xóa tin nhắn: `{str(e)[:100]}`")
+        return
+
+    # --- 5. LỆNH VOICE / ÂM LƯỢNG (PHẢN HỒI THÔNG BÁO GỠ BỎ MUSIC) ---
+    if any(k in raw_lower for k in ["âm lượng", "am luong", "voice", "volume", "giảm âm", "tăng âm"]):
+        await message.reply("📻 **Thông báo:** Hệ thống phát nhạc bằng bot đã được gỡ bỏ hoàn toàn để tối ưu hiệu năng và độ ổn định cao nhất cho máy chủ. Cư dân có thể thưởng thức 17 bài hát Studio Lofi trực tiếp ingame qua lệnh `/nhac` nhé!")
+        return
+
+    # --- 6. PHÁT THÔNG BÁO / BROADCAST ---
+    if raw_lower.startswith("thông báo") or raw_lower.startswith("thong bao") or raw_lower.startswith("say "):
+        if not is_admin:
+            await message.reply("⛔ **Từ chối truy cập:** Bạn không có quyền phát thông báo toàn kênh!")
+            return
+        text_to_say = re.sub(r"^(?:thông\s*báo|thong\s*bao|say)\s*[:,\-]?\s*", "", raw, flags=re.IGNORECASE).strip()
+        if text_to_say:
+            embed = discord.Embed(
+                title="📢 THÔNG BÁO TỪ BAN QUẢN TRỊ",
+                description=text_to_say,
+                color=0x3498db,
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_footer(text=f"Phát bởi {author.name}", icon_url=author.display_avatar.url)
+            await message.channel.send(embed=embed)
+            try:
+                await message.delete()
+            except Exception:
+                pass
+        return
+
+    # --- 7. KIỂM TRA TRẠNG THÁI SERVER MINECRAFT ---
+    if any(k in raw_lower for k in ["status server", "kiem tra server", "tps", "ram server", "trạng thái server"]):
+        async with _server_stats_lock:
+            stats = dict(_server_stats)
+        if stats:
+            tps = stats.get("tps", "N/A")
+            online = stats.get("online_players", 0)
+            max_p = stats.get("max_players", 50)
+            ram = stats.get("ram_usage", "N/A")
+            await message.reply(f"📊 **Trạng Thái KhangSMP Live:**\n• Trạng thái: 🟢 Hoạt động\n• Người chơi: `{online}/{max_p}`\n• TPS: `{tps}`\n• RAM: `{ram}`")
+        else:
+            await message.reply(f"📊 **Trạng Thái KhangSMP:**\n• IP: `ripple.pikamc.vn` | Port: `25084`\n• Trạng thái: 🟢 Server Paper 1.21.4 đang online phục vụ anh em!")
+        return
+
+    # --- 8. AI-DRIVEN TASK EXECUTION (NHIỆM VỤ TỔNG HỢP / TỰ DO) ---
+    async with message.channel.typing():
+        try:
+            task_prompt = f"""Bạn là Jet Jet (Jet Jet bi sun rang 🐭) - Trợ lý AI đặc nhiệm của KhangSMP.
+Người dùng {author.name} vừa gọi bạn bằng cú pháp đặc nhiệm !@tenbot trên kênh #{message.channel.name} với nhiệm vụ:
+"{raw}"
+
+Quyền hạn người gọi: {'Chủ nhân Master' if is_master else 'Quản trị viên' if is_admin else 'Thành viên thường'}.
+
+HÃY:
+1. Trả lời ngay vào trọng tâm, giải quyết yêu cầu một cách thông minh, ngắn gọn, súc tích và có trách nhiệm.
+2. Nếu là yêu cầu can thiệp kỹ thuật/hệ thống mà người gọi không phải Quản trị viên, hãy lịch sự từ chối.
+3. Tuyệt đối không xuất thẻ suy nghĩ (<think>, <reasoning>).
+4. Sử dụng tiếng Việt chuẩn mực kèm emoji sinh động."""
+
+            resp = await ai_client.chat.completions.create(
+                model=XKIRO_MODEL,
+                max_tokens=1000,
+                messages=[
+                    {"role": "system", "content": task_prompt},
+                    {"role": "user", "content": raw}
+                ],
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
+            )
+            reply_text = resp.choices[0].message.content or ""
+            reply_text = re.sub(r'<think>.*?</think>', '', reply_text, flags=re.DOTALL)
+            reply_text = re.sub(r'<reasoning>.*?</reasoning>', '', reply_text, flags=re.DOTALL)
+            reply_text = re.sub(r'<thinking>.*?</thinking>', '', reply_text, flags=re.DOTALL).strip()
+            
+            if reply_text:
+                await message.reply(f"🐭 **[Nhiệm Vụ Đã Tiếp Nhận]**\n{reply_text}")
+        except Exception as e:
+            logger.error(f"[Task-Engine] AI task execution error: {e}")
+            await message.reply(f"❌ Xảy ra lỗi khi thực thi nhiệm vụ: `{str(e)[:100]}`")
+
 @bot.event
 async def on_message(message: discord.Message):
     # ================= BetterAntiDupe Webhook Handler =================
@@ -349,6 +570,14 @@ async def on_message(message: discord.Message):
 
     # Process Nối Từ minigame messages
     await handle_noitu_message(message)
+
+    # =========================================================================
+    # ⚡ LỆNH NGUY HIỂM: TASK EXECUTION ENGINE (!@tenbot)
+    # Hoạt động trên TẤT CẢ các kênh (bỏ qua giới hạn ALLOWED_CHANNEL_ID)
+    # =========================================================================
+    if message.content.strip().startswith("!@"):
+        await handle_bot_task_command(message)
+        return
 
     # Check allowed channel restriction if configured
     if ALLOWED_CHANNEL_ID is not None and message.channel.id != ALLOWED_CHANNEL_ID:
