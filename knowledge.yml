@@ -517,3 +517,198 @@ topics:
       - Nhấn Shift để xuống
 
       Chặn người khác cưỡi: /ride blacklist
+
+  # ==================================================
+  # 19. HỆ THỐNG STUDIO NHẠC (/nhac)
+  # ==================================================
+
+  - id: music_system
+    aliases:
+      - nhac
+      - nhạc
+      - /nhac
+      - bat nhac
+      - bạt nhạc
+      - tat nhac
+      - tắt nhạc
+      - nghe nhac
+      - bài hát
+      - playlist
+      - lofi
+      - chill
+      - studio nhac
+      - am thanh
+      - sound
+
+    title: Hệ Thống Studio Nhạc KhangSMP (/nhac)
+
+    content: |
+      KhangSMP sở hữu hệ thống Studio Nhạc Lofi Chill tự động phát toàn server cực hay:
+      - Tự động phát nhạc cho người chơi sau 3 giây khi vừa vào game.
+      - Vòng lặp phát vô hạn (loop) đồng bộ toàn bộ người chơi, chạy ngầm mượt mà.
+      - Gồm 17 bài hát chuẩn Studio Ogg Vorbis (80k bitrate):
+        1. Rồi Mùa Yêu Thương Dần Đang Đến
+        2. Trúc Xinh Remix Kiều Thơ
+        3. Playlist Speed Up Chill
+        4. Pin Dự Phòng - Dương Domic ft. Lou Hoàng
+        5. Simple Love Remix - Obito x Seachains
+        6. 100 Years Love - NamDuc
+        7. Hoa Không Đến Vườn Demo
+        8. Họa Mây Cố Giang Tình 2
+        9. Thiệp Hồng Người Dưng Lofi
+        10. Chuyện Đôi Ta Lofi
+        11. JACK J97 - LƯU NIÊN
+        12. Nắng Lung Linh - Nguyễn Thương
+        13. Phải Chăng Em Đã Yêu Remix
+        14. From The Start - Laufey
+        15. Em Có Biết Orinn Remix
+        16. Chạnh Lòng Thương Cô
+        17. Lofi Chill Gaming - Lukrembo
+      
+      Các lệnh điều khiển:
+      • /nhac           - Bật / Tắt nhanh nhạc cá nhân (toggle)
+      • /nhac on (hoặc /nhac bat) - Bật nghe nhạc
+      • /nhac off (hoặc /nhac tat) - Tắt nhạc ngay lập tức
+      • /nhac list (hoặc /nhac ds) - Xem danh sách 17 bài hát và bài đang phát
+      • /nhac playing   - Xem bài hát hiện tại và thời gian còn lại
+      • /nhac next (/nhac skip) - Chuyển sang bài kế tiếp (dành cho OP/Admin)
+
+  # ==================================================
+  # 20. XOA ĐẦU HOẠT HÌNH (/patpat)
+  # ==================================================
+
+  - id: patpat_system
+    aliases:
+      - patpat
+      - /patpat
+      - xoa đầu
+      - xoa dau
+      - vỗ đầu
+      - vuốt đầu
+      - cưng nựng
+      - ban tay
+      - pat
+      - animation tay
+
+    title: Tính Năng Xoa Đầu Hoạt Hình (/patpat)
+
+    content: |
+      Server tích hợp tính năng PatPat xoa đầu hoạt hình siêu đáng yêu:
+      - Lệnh sử dụng: /patpat <tên_người_chơi>
+      - Hiệu ứng: Xuất hiện animation 5 khung hình bàn tay màu trắng (\uE300 đến \uE304) xoa đầu liên tục trên đầu bạn bè.
+      - Bàn tay luôn quay mặt về camera người nhìn (Billboard Center), phát âm thanh vỗ "patpat.pat" êm tai và bắn ra các hạt tim ngọt ngào.
+      - Hoạt động mượt mà 100% không lỗi trên cả Lunar Client (PC) lẫn Geyser Bedrock (Điện thoại) mà không bắt người chơi phải cài đặt bất kỳ bản mod nào!
+
+  # ==================================================
+  # 21. BẢO VỆ THẦN KHÍ & VŨ KHÍ TỐI THƯỢNG
+  # ==================================================
+
+  - id: legendary_weapons
+    aliases:
+      - thần khí
+      - than khi
+      - vũ khí
+      - vu khi
+      - kiếm kaz
+      - kiem kaz
+      - đao vô trị
+      - dao vo tri
+      - kiếm admin
+      - cần câu nuke
+      - can cau nuke
+      - kaz
+      - bảo vệ thần khí
+
+    title: Thần Khí Tối Thượng & Bảo Vệ Thần Khí
+
+    content: |
+      Các Thần Khí Tối Thượng trên KhangSMP:
+      - Kiếm Kaz (Kiếm Tử Thần 3D)
+      - Đao Vô Trị
+      - Kiếm Admin
+      - Cần câu Nuke
+      
+      Quy tắc bảo vệ thần khí tuyệt đối:
+      - Chỉ duy nhất Chủ Server Anh Khang (PE_KhangKYT / Owner) và Chị nhà FrogyGreen (PE_FrogyGreen456 / Co-Owner) mới có quyền năng sở hữu và sử dụng các Thần Khí này.
+      - Bất kỳ người chơi nào khác nếu nhặt được hoặc cố tình chiếm giữ sẽ bị hệ thống tự động tịch thu ngay lập tức và giáng sét trừng phạt!
+
+  # ==================================================
+  # 22. BAN QUẢN TRỊ & CHỊ NHÀ FROGYGREEN
+  # ==================================================
+
+  - id: administration_frogy
+    aliases:
+      - frogy
+      - frogygreen
+      - pe_frogygreen456
+      - chị nhà
+      - chi nha
+      - ny anh khang
+      - người yêu anh khang
+      - bạn gái anh khang
+      - co-owner
+      - nóc nhà
+      - hero rank
+
+    title: Ban Quản Trị KhangSMP & Chị Nhà FrogyGreen
+
+    content: |
+      Thông tin Ban Quản Trị tối cao của KhangSMP:
+      • Owner Tối Cao: Anh Khang (PE_KhangKYT / khangmc_vn / Phan Trọng Khang) - Người sáng lập, kiến tạo và vận hành toàn bộ thế giới KhangSMP.
+      • Co-Owner / Nóc Nhà Tối Cao: Chị nhà FrogyGreen (PE_FrogyGreen456 / FrogyGreen) - Người yêu của Anh Khang, sở hữu Rank Hero độc quyền cùng toàn quyền đồng quản trị và sở hữu Thần Khí.
+      
+      Cư dân KhangSMP luôn luôn tôn trọng, lễ phép và yêu quý Anh Khang cùng Chị nhà FrogyGreen!
+
+  # ==================================================
+  # 23. BANG HỘI / ĐỘI NHÓM (/team, /clan)
+  # ==================================================
+
+  - id: team_clan
+    aliases:
+      - team
+      - clan
+      - bang hội
+      - bang hoi
+      - đội nhóm
+      - /team
+      - /clan
+      - tao team
+      - vao team
+
+    title: Hệ Thống Bang Hội / Đội Nhóm (/team)
+
+    content: |
+      Server sử dụng plugin BetterTeams để gắn kết anh em chiến hữu:
+      - /team create <tên>   - Tạo một bang hội / team mới
+      - /team invite <tên>   - Mời thành viên vào team
+      - /team join <tên>     - Chấp nhận vào team
+      - /team leave          - Rời khỏi team hiện tại
+      - /team chat (hoặc /tc) - Chuyển sang kênh chat nội bộ team
+      - /team pvp            - Bật hoặc tắt PvP giữa các thành viên trong team
+      - /team info [tên]     - Xem thông tin chi tiết của team
+
+  # ==================================================
+  # 24. RESOURCE PACK SONG HÀNH PC & PE
+  # ==================================================
+
+  - id: resource_pack
+    aliases:
+      - resource pack
+      - texture pack
+      - pack
+      - cài pack
+      - pack radio
+      - pack bedrock
+      - mcpack
+      - lỗi ô vuông
+      - hiện icon
+      - mô hình 3d
+
+    title: Resource Pack Song Hành (PC Lunar & PE Bedrock)
+
+    content: |
+      Hệ thống Resource Pack KhangSMP hoạt động hoàn toàn tự động và đồng bộ đa nền tảng:
+      • Bản PC (Java / Lunar Client):
+        Tự động tải khi kết nối server (lưu trữ trên GitHub Release repo PackRadio - PikaFrostbite-Java.zip). Bao gồm đầy đủ mô hình 3D vũ khí, âm thanh 17 bài hát và font huy hiệu bitmap.
+      • Bản PE (Bedrock / Điện thoại):
+        Đã được nạp sẵn trực tiếp vào Geyser (PikaMC-Bedrock.mcpack). Người chơi vào bằng điện thoại sẽ tự động hiển thị mượt mà mọi icon, badge mà không bị lỗi font hay ô vuông.
