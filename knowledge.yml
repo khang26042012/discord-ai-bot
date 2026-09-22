@@ -37,7 +37,7 @@ topics:
       Minecraft Java 1.16 trở lên + Bedrock/PE (qua Geyser/Floodgate)
 
       Chủ server / Owner / Admin:
-      Phan Trọng Khang (sinh sống tại Vĩnh Long)
+      Phan Trọng Khang (khangmc_vn)
 
       Discord chính thức:
       https://discord.gg/4afmVDmy2
@@ -600,67 +600,7 @@ topics:
       - Hoạt động mượt mà 100% không lỗi trên cả Lunar Client (PC) lẫn Geyser Bedrock (Điện thoại) mà không bắt người chơi phải cài đặt bất kỳ bản mod nào!
 
   # ==================================================
-  # 21. BẢO VỆ THẦN KHÍ & VŨ KHÍ TỐI THƯỢNG
-  # ==================================================
-
-  - id: legendary_weapons
-    aliases:
-      - thần khí
-      - than khi
-      - vũ khí
-      - vu khi
-      - kiếm kaz
-      - kiem kaz
-      - đao vô trị
-      - dao vo tri
-      - kiếm admin
-      - cần câu nuke
-      - can cau nuke
-      - kaz
-      - bảo vệ thần khí
-
-    title: Thần Khí Tối Thượng & Bảo Vệ Thần Khí
-
-    content: |
-      Các Thần Khí Tối Thượng trên KhangSMP:
-      - Kiếm Kaz (Kiếm Tử Thần 3D)
-      - Đao Vô Trị
-      - Kiếm Admin
-      - Cần câu Nuke
-      
-      Quy tắc bảo vệ thần khí tuyệt đối:
-      - Chỉ duy nhất Chủ Server Anh Khang (PE_KhangKYT / Owner) và Chị nhà FrogyGreen (PE_FrogyGreen456 / Co-Owner) mới có quyền năng sở hữu và sử dụng các Thần Khí này.
-      - Bất kỳ người chơi nào khác nếu nhặt được hoặc cố tình chiếm giữ sẽ bị hệ thống tự động tịch thu ngay lập tức và giáng sét trừng phạt!
-
-  # ==================================================
-  # 22. BAN QUẢN TRỊ & CHỊ NHÀ FROGYGREEN
-  # ==================================================
-
-  - id: administration_frogy
-    aliases:
-      - frogy
-      - frogygreen
-      - pe_frogygreen456
-      - chị nhà
-      - chi nha
-      - ny anh khang
-      - người yêu anh khang
-      - bạn gái anh khang
-      - co-owner
-      - nóc nhà
-      - hero rank
-
-    title: Ban Quản Trị KhangSMP & Chị Nhà FrogyGreen
-
-    content: |
-      Thông tin Ban Quản Trị tối cao của KhangSMP:
-      • Owner Tối Cao: Anh Khang (PE_KhangKYT / khangmc_vn / Phan Trọng Khang) - Người sáng lập, kiến tạo và vận hành toàn bộ thế giới KhangSMP.
-      • Co-Owner / Nóc Nhà Tối Cao: Chị nhà FrogyGreen (PE_FrogyGreen456 / FrogyGreen) - Người yêu của Anh Khang, sở hữu Rank Hero độc quyền cùng toàn quyền đồng quản trị và sở hữu Thần Khí.
-      
-      Cư dân KhangSMP luôn luôn tôn trọng, lễ phép và yêu quý Anh Khang cùng Chị nhà FrogyGreen!
-
-  # ==================================================
-  # 23. BANG HỘI / ĐỘI NHÓM (/team, /clan)
+  # 21. BANG HỘI / ĐỘI NHÓM (/team, /clan)
   # ==================================================
 
   - id: team_clan
@@ -688,7 +628,7 @@ topics:
       - /team info [tên]     - Xem thông tin chi tiết của team
 
   # ==================================================
-  # 24. RESOURCE PACK SONG HÀNH PC & PE
+  # 22. RESOURCE PACK SONG HÀNH PC & PE
   # ==================================================
 
   - id: resource_pack
