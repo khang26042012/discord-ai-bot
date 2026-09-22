@@ -652,3 +652,80 @@ topics:
         Tự động tải khi kết nối server (lưu trữ trên GitHub Release repo PackRadio - PikaFrostbite-Java.zip). Bao gồm đầy đủ mô hình 3D vũ khí, âm thanh 17 bài hát và font huy hiệu bitmap.
       • Bản PE (Bedrock / Điện thoại):
         Đã được nạp sẵn trực tiếp vào Geyser (PikaMC-Bedrock.mcpack). Người chơi vào bằng điện thoại sẽ tự động hiển thị mượt mà mọi icon, badge mà không bị lỗi font hay ô vuông.
+
+  # ==================================================
+  # 23. CHẾ ĐỘ CHƠI (GAME MODES) & NHỮNG GÌ SERVER KHÔNG CÓ
+  # ==================================================
+
+  - id: game_modes_scope
+    aliases:
+      - chế độ
+      - che do
+      - game mode
+      - gamemode
+      - survival
+      - sinh tồn
+      - sinh ton
+      - oneblock
+      - one block
+      - 1 block
+      - skyblock
+      - sky block
+      - bedwars
+      - bed wars
+      - minigame
+      - mini game
+      - mini games
+      - prison
+      - gens
+      - generator
+      - anarchy
+      - towny
+
+    title: Chế Độ Chơi KhangSMP & Những Gì Server KHÔNG CÓ
+
+    content: |
+      CHẾ ĐỘ CHƠI DUY NHẤT:
+      - KhangSMP là máy chủ SINH TỒN (Survival SMP / Vanilla+) thuần túy trên Paper 1.21.4.
+      - Lối chơi tập trung vào: Khám phá thế giới rộng lớn, đào khoáng sản, xây dựng công trình, bảo vệ đất đai bằng Xẻng Vàng (/claim), kết nối bang hội (/team), chặt cây nhanh (/timber), và thư giãn cùng Studio Nhạc Lofi (/nhac).
+
+      NHỮNG CHẾ ĐỘ MÁY CHỦ TUYỆT ĐỐI KHÔNG CÓ:
+      - KHÔNG CÓ OneBlock (Server không có map 1 block nào cả).
+      - KHÔNG CÓ SkyBlock (Không có đảo trên trời).
+      - KHÔNG CÓ Bedwars, Skywars, Eggwars hay các minigame đối kháng.
+      - KHÔNG CÓ Prison, Gens, BoxPvP hay Towny riêng biệt.
+
+      QUY TẮC PHẢN HỒI:
+      Nếu ai hỏi server có OneBlock, SkyBlock, Bedwars hay mini-game nào không:
+      Khẳng định dứt khoát: "KhangSMP là máy chủ Sinh Tồn (Survival SMP) thuần túy, hiện tại KHÔNG CÓ chế độ [X] nha bạn! Server tập trung trải nghiệm sinh tồn, xây dựng cày cuốc, bảo vệ đất và lập team /team chiến đấu cùng bạn bè."
+
+  # ==================================================
+  # 24. CƠ CHẾ FARM & TÍNH NĂNG SINH TỒN
+  # ==================================================
+
+  - id: mechanics_farms
+    aliases:
+      - farm
+      - máy ấp trứng
+      - may ap trung
+      - ấp trứng
+      - ap trung
+      - trứng gà
+      - trung ga
+      - nuôi gà
+      - nuoi ga
+      - spawner
+      - lồng spawn
+      - long spawn
+      - auto farm
+      - farm tự động
+
+    title: Cơ Chế Farm & Chăn Nuôi Trên KhangSMP
+
+    content: |
+      Cơ chế farm và chăn nuôi trên KhangSMP hoàn toàn tuân theo cơ chế Minecraft Vanilla gốc 1.21.4 (Paper):
+      - Động vật (gà, bò, cừu, heo) sinh sản và đẻ trứng tự nhiên khi được cho ăn hạt giống/lúa mì/cà rốt theo luật gốc của Minecraft.
+      - TUYỆT ĐỐI KHÔNG CÓ "máy ấp trứng tự động", không có lệnh mua bán trứng ảo hay tính năng hack farm trong /menu.
+      - Người chơi muốn farm trứng hoặc thực phẩm phải tự tay xây chuồng trại thủ công bằng phễu (hopper), nước và redstone vanilla.
+      - Không sử dụng các phần mềm gian lận, auto click hay dupe đồ (hệ thống BetterAntiDupe sẽ phát hiện và xử lý ngay).
+
