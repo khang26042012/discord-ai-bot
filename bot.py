@@ -260,16 +260,80 @@ async def on_ready():
         logger.error(f"[AutoVoice] Startup orphan cleanup error: {e}")
 
 @bot.event
-async def on_member_join(member):
-    channel = bot.get_channel(WELCOME_CHANNEL_ID)
-    if channel is not None:
-        await channel.send(f"Chào mừng {member.mention} đã đến với server, chúc bạn có một trải nghiệm vui vẻ, đừng quên pick role. Cần hỗ trợ cứ alo Jet Jet nha")
+async def on_member_join(member: discord.Member):
+    try:
+        channel = bot.get_channel(WELCOME_CHANNEL_ID)
+        if channel is None:
+            channel = await bot.fetch_channel(WELCOME_CHANNEL_ID)
+        if channel is not None:
+            avatar_url = member.display_avatar.url if hasattr(member, "display_avatar") else member.avatar.url
+
+            embed = discord.Embed(
+                title="🎉 𝐂𝐇𝐀𝐎 𝐌𝐔𝐍𝐆 𝐃𝐄𝐍 𝐊𝐇𝐀𝐍𝐆𝐒𝐌𝐏 🎉",
+                description=f"Xin chao {member.mention} 👋\nChuc ban co nhung gio phut that vui ve! ✨",
+                color=15844367, # 0xF1C40F Vàng Hoàng Kim
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_thumbnail(url=avatar_url)
+            
+            embed.add_field(
+                name="📜 𝐁𝐔𝐎𝐂 𝟏 - 𝐃𝐎𝐂 𝐋𝐔𝐀𝐓",
+                value="Ghe <#1547608303813787732> & chap hanh nghiem - vi pham = an mute/ban ⚠️",
+                inline=False
+            )
+            embed.add_field(
+                name="🧭 𝐁𝐔𝐎𝐂 𝟐 - 𝐇𝐎𝐂 𝐂𝐀𝐂𝐇 𝐂𝐇𝐎𝐈",
+                value="Mo <#1547608318384672778> & chon chu de: Better Team • Choi co ban • Event The Egg 🥳",
+                inline=False
+            )
+            embed.add_field(
+                name="🎮 𝐕𝐀𝐎 𝐆𝐀𝐌𝐄 𝐍𝐆𝐀𝐘",
+                value="IP: **ripple.pikamc.vn:25084** (Hỗ trợ cả Java & Bedrock/PE)",
+                inline=False
+            )
+            embed.add_field(
+                name="🤖 𝐂𝐀𝐍 𝐇𝐎𝐈 𝐆𝐈?",
+                value="Chat voi bot o <#1547645090539773972> (Jet Jet AI tra loi 24/7) 👀",
+                inline=False
+            )
+            embed.add_field(
+                name="🤗 𝐊𝐄𝐓 𝐁𝐀𝐍",
+                value="Ghe <#1547608322595881092> de tro chuyen & <#1547608330778714192> de tim team 🫶",
+                inline=False
+            )
+            embed.set_footer(
+                text="🆘 Can giup do? Tag BQT hoac hoi Jet Jet • Chuc ban som len VIP 💎"
+            )
+
+            await channel.send(content=member.mention, embed=embed)
+            logger.info(f"[Welcome] Đã gửi khung chào mừng kèm avatar cho {member.display_name} ({member.id})")
+    except Exception as e:
+        logger.error(f"[Welcome] Lỗi gửi khung chào mừng cho {member.name}: {e}")
 
 @bot.event
-async def on_member_remove(member):
-    channel = bot.get_channel(SEE_YOU_CHANNEL_ID)
-    if channel is not None:
-        await channel.send(f"Xin lỗi {member.mention}! Tôi đã không giữ chân bạn được, cảm ơn bạn đã đồng hành cùng server! Nếu có duyên chúng ta sẽ gặp lại")
+async def on_member_remove(member: discord.Member):
+    try:
+        channel = bot.get_channel(SEE_YOU_CHANNEL_ID)
+        if channel is None:
+            channel = await bot.fetch_channel(SEE_YOU_CHANNEL_ID)
+        if channel is not None:
+            avatar_url = member.display_avatar.url if hasattr(member, "display_avatar") else member.avatar.url
+
+            embed = discord.Embed(
+                title="👋 𝐓𝐀𝐌 𝐁𝐈𝐄𝐓 & 𝐇𝐄𝐍 𝐆𝐀𝐏 𝐋𝐀𝐈",
+                description=f"Xin lỗi {member.mention}!\nTôi đã không giữ chân bạn được, cảm ơn bạn đã đồng hành cùng server! Nếu có duyên chúng ta sẽ gặp lại nhé ✨",
+                color=0xE74C3C, # Đỏ cam thanh lịch
+                timestamp=datetime.now(timezone.utc)
+            )
+            embed.set_thumbnail(url=avatar_url)
+            embed.set_footer(
+                text="KhangSMP Community • Luôn chào đón bạn quay trở lại"
+            )
+
+            await channel.send(embed=embed)
+            logger.info(f"[Goodbye] Đã gửi khung tạm biệt cho {member.display_name} ({member.id})")
+    except Exception as e:
+        logger.error(f"[Goodbye] Lỗi gửi khung tạm biệt cho {member.name}: {e}")
 
 # ==============================================================================
 # 🎧 AUTO VOICE ROOM ENGINE (TỰ ĐỘNG TẠO VÀ DỌN DẸP PHÒNG VOICE)
