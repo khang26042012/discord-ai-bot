@@ -1,731 +1,927 @@
 topics:
+- id: server_info
+  aliases:
+  - server
+  - thông tin server
+  - giới thiệu
+  - khangsmp
+  - ip
+  - địa chỉ server
+  - java
+  - bedrock
+  - pe
+  - port
+  - discord
+  - owner
+  - admin
+  - chủ server
+  - bảo trì
+  title: Thông tin chung về KhangSMP
+  content: 'Tên server: KhangSMP
 
-  # ==================================================
-  # 1. THÔNG TIN CHUNG
-  # ==================================================
-
-  - id: server_info
-    aliases:
-      - server
-      - thông tin server
-      - giới thiệu
-      - khangsmp
-      - ip
-      - địa chỉ server
-      - java
-      - bedrock
-      - pe
-      - port
-      - discord
-      - owner
-      - admin
-      - chủ server
-      - bảo trì
-
-    title: Thông tin chung về KhangSMP
-
-    content: |
-      Tên server: KhangSMP
-
-      Địa chỉ IP (Java & Bedrock):
-      ripple.pikamc.vn
-
-      Port:
-      Cả Java & Bedrock/PE: 25084 (IP: ripple.pikamc.vn)
-
-      Phiên bản hỗ trợ:
-      Minecraft Java 1.16 trở lên + Bedrock/PE (qua Geyser/Floodgate)
-
-      Chủ server / Owner / Admin:
-      Phan Trọng Khang (khangmc_vn)
-
-      Discord chính thức:
-      https://discord.gg/4afmVDmy2
-
-      TikTok của Owner:
-      @phantrongkhangg
-
-      Mọi thông báo bảo trì, cập nhật và sự kiện đều được đăng trên Discord.
-
-  # ==================================================
-  # 2. HƯỚNG DẪN NGƯỜI CHƠI MỚI
-  # ==================================================
-
-  - id: getting_started
-    aliases:
-      - newbie
-      - người mới
-      - tân thủ
-      - bắt đầu
-      - hướng dẫn
-      - chơi như thế nào
-      - kit
-      - mới vào
-
-    title: Hướng dẫn người chơi mới
-
-    content: |
-      Khi mới vào server lần đầu, bạn sẽ nhận được:
-      - Chào mừng trang trọng toàn server + pháo hoa
-      - Hướng dẫn lệnh hữu ích gửi riêng
-
-      Bảo vệ tân thủ (60 phút đầu):
-      - Bạn KHÔNG thể bị PvP trong 60 phút đầu tiên
-      - Dùng /baove để xem thời gian bảo vệ còn lại
-
-      Bước bắt đầu:
-      1. Dùng /redeem denbu2 và /redeem denbu3 để nhận quà tân thủ + 800 claim blocks
-      2. Dùng /rtp để dịch chuyển ngẫu nhiên ra ngoài Spawn
-      3. Xây nhà, dùng Xẻng Vàng Claim đất để bảo vệ
-      4. Đặt /sethome để về nhà nhanh
-      5. Gõ /daily để nhận quà hằng ngày (Kim Cương, Tiền, Táo Vàng...)
-      6. Mở /menu để xem tất cả tính năng
-
-      Lưu ý quan trọng:
-      - Claim blocks ban đầu: 800 (từ redeem) + tích lũy theo thời gian chơi
-      - Rank chỉ do Admin cấp, không thể mua
-      - Server KHÔNG có Keep Inventory (cẩn thận khi chết!)
-      - Cooldown lệnh dịch chuyển: 3 giây
-
-  # ==================================================
-  # 3. CÁC LỆNH CƠ BẢN
-  # ==================================================
-
-  - id: commands
-    aliases:
-      - command
-      - commands
-      - lệnh
-      - help
-      - lệnh gì
-
-    title: Các lệnh cơ bản
-
-    content: |
-      === Menu chính ===
-      /menu             - Mở bảng điều khiển nhanh (GUI)
-
-      === Dịch chuyển ===
-      /spawn            - Về Spawn
-      /rtp              - Dịch chuyển ngẫu nhiên (Overworld)
-      /home [tên]       - Về Home
-      /homes            - Xem danh sách Home
-      /sethome [tên]    - Đặt Home
-      /delhome [tên]    - Xóa Home
-      /back             - Quay lại vị trí vừa chết
-
-      === TPA ===
-      /tpa <tên>        - Gửi yêu cầu dịch chuyển
-      /tpaccept         - Chấp nhận
-      /tpdeny           - Từ chối
-
-      === Tiện ích ===
-      /msg <tên>        - Nhắn tin riêng
-      /reply            - Trả lời người vừa nhắn
-      /daily            - Nhận quà hằng ngày
-      /tx               - Sòng bạc Tài Xỉu 1 chạm
-      /baove            - Xem trạng thái bảo vệ tân thủ
-      /report <tên> <lý do> - Báo cáo người vi phạm
-      /timber           - Bật/tắt chặt cả cây 1 nhát
-      /sb               - Bật/tắt bảng điểm Scoreboard
-
-  # ==================================================
-  # 4. CLAIM ĐẤT
-  # ==================================================
-
-  - id: claim
-    aliases:
-      - claim
-      - grief
-      - griefprevention
-      - xẻng vàng
-      - golden shovel
-      - bảo vệ đất
-      - claimslist
-      - claim block
-
-    title: Claim đất (GriefPrevention)
-
-    content: |
-      Server sử dụng plugin GriefPrevention để bảo vệ đất đai.
-
-      Cách tạo Claim:
-      - Cầm Xẻng Vàng (Golden Shovel)
-      - Chuột phải vào hai góc đối diện của khu vực cần bảo vệ
-
-      Claim Blocks:
-      - Nhận 800 blocks từ /redeem denbu2 + /redeem denbu3
-      - Tích lũy thêm theo thời gian chơi online
-
-      Các lệnh quản lý:
-      /trust <tên>           - Cho phép xây dựng
-      /untrust <tên>         - Thu hồi quyền
-      /accesstrust <tên>     - Cho phép dùng cửa, nút
-      /containertrust <tên>  - Cho phép mở rương
-      /trustlist             - Xem danh sách quyền
-      /abandonclaim          - Xóa Claim đang đứng
-      /abandonallclaims      - Xóa toàn bộ Claim
-      /claimslist            - Xem số blocks đã dùng/còn lại
-
-  # ==================================================
-  # 5. RANK
-  # ==================================================
-
-  - id: ranks
-    aliases:
-      - rank
-      - cấp bậc
-      - lên rank
-      - thăng cấp
-
-    title: Rank trên KhangSMP
-
-    content: |
-      Các rank hiện tại:
-      • Member   - Rank mặc định khi vào server
-      • Admin    - Quản trị viên
-      • Owner    - Chủ server (Phan Trọng Khang)
-
-      Rank đặc biệt (do Admin cấp tay):
-      Manager, Famous, Discord, Helper, TheEgg
-
-      Lưu ý:
-      - Rank chỉ do Owner/Admin cấp trực tiếp
-      - Không thể mua Rank bằng tiền thật hoặc tiền trong game
-
-  # ==================================================
-  # 6. ĐIỂM DANH HẰNG NGÀY
-  # ==================================================
-
-  - id: daily
-    aliases:
-      - daily
-      - điểm danh
-      - quà ngày
-      - quà hằng ngày
-      - quangay
-      - diemdanh
-      - nhận quà hàng ngày
-
-    title: Điểm Danh Hằng Ngày (/daily)
-
-    content: |
-      Mỗi 24 giờ bạn có thể nhận quà miễn phí một lần.
-
-      Cách nhận:
-      - /daily hoặc /quangay hoặc /diemdanh
-      - Hoặc mở /menu → bấm icon Rương 🎁
-
-      Quà nhận được mỗi ngày:
-      - +10,000$ tiền mặt
-      - 5 Kim Cương
-      - 3 Táo Vàng Enchant
-      - 16 Tên Lửa (Firework Rocket)
-      - 16 Thịt Bò Nướng
-
-  # ==================================================
-  # 7. TÀI XỈU (SÒNG BẠC)
-  # ==================================================
-
-  - id: taixiu
-    aliases:
-      - tài xỉu
-      - taixiu
-      - tx
-      - cá cược
-      - sòng bạc
-      - cờ bạc
-      - xúc xắc
-      - đặt cược
-
-    title: Sòng Bạc Tài Xỉu (/tx)
-
-    content: |
-      Mini-game cá cược xúc xắc 1 chạm, cực dễ chơi.
-
-      Cách chơi:
-      1. Gõ /tx hoặc mở /menu → icon Vàng 🎲
-      2. Chọn mức tiền cược (1K đến TẤT TAY)
-      3. Bấm ĐẶT TÀI (đỏ) hoặc ĐẶT XỈU (xanh)
-      4. Chờ 10 giây đếm ngược xem Action Bar
-      5. Kết quả hiện to giữa màn hình!
-
-      Luật chơi:
-      - TÀI: Tổng 3 xúc xắc từ 11-18 điểm
-      - XỈU: Tổng 3 xúc xắc từ 3-10 điểm
-      - Tỉ lệ thắng: 1 ăn 1.8 (đã trừ 10% thuế nhà cái)
-      - Giới hạn: mỗi người tối đa 1 lần / 2 giờ
-
-  # ==================================================
-  # 8. BẢO VỆ TÂN THỦ
-  # ==================================================
-
-  - id: newbie_protection
-    aliases:
-      - bảo vệ tân thủ
-      - baove
-      - protection
-      - miễn pvp
-      - không bị đánh
-      - pvp mới vào
-
-    title: Bảo Vệ Tân Thủ (/baove)
-
-    content: |
-      Khi lần đầu vào KhangSMP, được bảo vệ hoàn toàn khỏi PvP trong 60 phút.
-
-      Trong thời gian bảo vệ:
-      - Không ai gây sát thương được cho bạn
-      - Bạn cũng không thể tấn công người khác
-
-      Xem trạng thái:
-      /baove hoặc /protection hoặc /newbie
-
-  # ==================================================
-  # 9. PVP
-  # ==================================================
-
-  - id: pvp
-    aliases:
-      - pvp
-      - đánh nhau
-      - combat
-      - bị giết
-      - pk
-
-    title: PvP
-
-    content: |
-      Server có bật PvP ngoài vùng Spawn.
-
-      Quy tắc:
-      - Không được PvP trong khu vực Spawn
-      - Không được PvP trong Claim của người khác
-      - Tân thủ mới vào được bảo vệ 60 phút đầu
-      - Bắt nạt tân thủ sẽ bị xử lý theo nội quy
-
-  # ==================================================
-  # 10. CHẶT CÂY NHANH (TIMBER)
-  # ==================================================
-
-  - id: timber
-    aliases:
-      - timber
-      - chặt cây
-      - chặt nhanh
-      - chatcay
-      - cưa cây
-
-    title: Chặt Cây Nhanh (/timber)
-
-    content: |
-      Chặt cả cây chỉ bằng 1 nhát rìu (tối đa 30 block gỗ).
-      Rìu hao mòn tương ứng với số gỗ bị phá.
-
-      Bật/tắt: /timber hoặc /chatcay
-
-  # ==================================================
-  # 11. BÁO CÁO VI PHẠM
-  # ==================================================
-
-  - id: report
-    aliases:
-      - report
-      - báo cáo
-      - tố cáo
-      - vi phạm
-
-    title: Báo Cáo Vi Phạm (/report)
-
-    content: |
-      /report <tên người chơi> <lý do>
-
-      Ví dụ: /report PE_xxx hack speed
-
-      Thông báo ngay đến Admin online, được lưu lại để Admin xem bằng /reports.
-
-  # ==================================================
-  # 12. REDEEM CODE
-  # ==================================================
-
-  - id: redeem
-    aliases:
-      - redeem
-      - code
-      - mã thưởng
-      - denbu
-      - quà code
-
-    title: Redeem Code (Mã Thưởng)
-
-    content: |
-      /redeem denbu2 - 32 Kim Cương, 4 Netherite Scrap, 3 Táo Vàng, 64 Tên Lửa, 30 Level, +50,000$
-      /redeem denbu3 - +800 Claim Blocks
-
-      Mỗi code chỉ dùng 1 lần / người. Theo dõi Discord để nhận code mới.
-
-  # ==================================================
-  # 13. FAQ
-  # ==================================================
-
-  - id: faq
-    aliases:
-      - faq
-      - câu hỏi thường gặp
-      - lỗi
-      - không được
-      - tại sao
-
-    title: FAQ - Câu hỏi thường gặp
-
-    content: |
-      Không phá được block?
-      → Bạn đang ở Spawn hoặc trong Claim của người khác.
-
-      Không mở được rương / cửa?
-      → Chưa được chủ Claim cấp quyền /containertrust hoặc /accesstrust.
-
-      Không Claim được?
-      → Claim bị chồng, ở vùng cấm, hoặc hết claim blocks. Kiểm tra: /claimslist
-
-      Có mất đồ khi chết không?
-      → CÓ. Server KHÔNG có Keep Inventory. Hãy cẩn thận!
-
-      Bị người khác đánh khi mới vào?
-      → /baove để xem thời gian bảo vệ tân thủ còn lại.
-
-      Shop ở đâu?
-      → Chưa có NPC Shop. Dùng /tx để chơi Tài Xỉu kiếm tiền!
-
-      Cần hỗ trợ?
-      → Discord: https://discord.gg/4afmVDmy2
-
-  # ==================================================
-  # 14. NỘI QUY
-  # ==================================================
-
-  - id: rules
-    aliases:
-      - nội quy
-      - rules
-      - hack
-      - cheat
-      - vi phạm
-      - cấm
-
-    title: Nội quy Server
-
-    content: |
-      Nghiêm cấm:
-      • Hack / Cheat / Client bất hợp pháp
-      • Bug Abuse, Duplication, Grief
-      • Spam chat, chửi thề tục tĩu (bị Thiên Kiếp Sấm Sét 1 phút!)
-      • Quảng cáo server khác
-      • Bắt nạt tân thủ / người mới
-      • Lừa đảo, chiếm đoạt tài sản
-
-      Vi phạm: cảnh cáo → mute → kick → ban.
-
-  # ==================================================
-  # 15. LIÊN HỆ
-  # ==================================================
-
-  - id: contact
-    aliases:
-      - discord
-      - liên hệ
-      - support
-      - tiktok
-      - hỗ trợ
-
-    title: Liên hệ & Hỗ trợ
-
-    content: |
-      Discord: https://discord.gg/4afmVDmy2
-      Chủ server: Phan Trọng Khang
-      TikTok: @phantrongkhangg
-
-  # ==================================================
-  # 16. PLUGIN
-  # ==================================================
-
-  - id: plugins
-    aliases:
-      - plugin
-      - plugins
-      - hệ thống
-
-    title: Plugin đang sử dụng
-
-    content: |
-      Server Paper 1.21.4, Bedrock/PE qua Geyser + Floodgate.
-
-      Tính năng Skript tuỳ chỉnh:
-      - Tài Xỉu 1 Chạm (/tx)
-      - Điểm Danh Hằng Ngày (/daily)
-      - Bảo Vệ Tân Thủ 60 phút (/baove)
-      - Chặt Cây Nhanh (/timber)
-      - 1 Người Ngủ Qua Đêm
-      - Thiên Kiếp Sấm Sét (chống chửi thề)
-      - Báo Cáo Vi Phạm (/report)
-      - Chào Mừng Tân Thủ tự động
-      - Redeem Code (/redeem)
-
-      Plugin khác: GriefPrevention, VeinMiner, TAB, GrimAC, LuckPerms, DriveBackupV2...
-
-  # ==================================================
-  # 17. VEINMINER
-  # ==================================================
-
-  - id: veinminer
-    aliases:
-      - veinminer
-      - đào quặng nhanh
-      - vein mine
-      - vm
-
-    title: VeinMiner (Đào quặng nhanh)
-
-    content: |
-      Giữ Shift + dùng dụng cụ phù hợp đập vào quặng/gỗ để phá toàn bộ dải cùng loại.
-      /veinminer toggle - Bật/tắt VeinMiner
-
-  # ==================================================
-  # 18. NGỒI / NẰM / CƯỠI ĐẦU
-  # ==================================================
-
-  - id: sit_ride
-    aliases:
-      - ngồi
-      - nằm
-      - sit
-      - gsit
-      - cưỡi đầu
-      - rideonhead
-      - leo lên đầu
-
-    title: Ngồi, Nằm & Cưỡi Đầu
-
-    content: |
-      Ngồi / Nằm (GSit):
-      - PE: Nhấn giữ vào mặt đất để ngồi; vuốt xuống để nằm
-      - Java: Shift + Chuột phải vào mặt đất
-
-      Cưỡi lên đầu người khác:
-      - PE: Nhấn giữ vào người chơi khác
-      - Java: Chuột phải vào người chơi khác
-      - Nhấn Shift để xuống
-
-      Chặn người khác cưỡi: /ride blacklist
-
-  # ==================================================
-  # 19. HỆ THỐNG STUDIO NHẠC (/nhac)
-  # ==================================================
-
-  - id: music_system
-    aliases:
-      - nhac
-      - nhạc
-      - /nhac
-      - bat nhac
-      - bạt nhạc
-      - tat nhac
-      - tắt nhạc
-      - nghe nhac
-      - bài hát
-      - playlist
-      - lofi
-      - chill
-      - studio nhac
-      - am thanh
-      - sound
-
-    title: Hệ Thống Studio Nhạc KhangSMP (/nhac)
-
-    content: |
-      KhangSMP sở hữu hệ thống Studio Nhạc Lofi Chill tự động phát toàn server cực hay:
-      - Tự động phát nhạc cho người chơi sau 3 giây khi vừa vào game.
-      - Vòng lặp phát vô hạn (loop) đồng bộ toàn bộ người chơi, chạy ngầm mượt mà.
-      - Gồm 17 bài hát chuẩn Studio Ogg Vorbis (80k bitrate):
-        1. Rồi Mùa Yêu Thương Dần Đang Đến
-        2. Trúc Xinh Remix Kiều Thơ
-        3. Playlist Speed Up Chill
-        4. Pin Dự Phòng - Dương Domic ft. Lou Hoàng
-        5. Simple Love Remix - Obito x Seachains
-        6. 100 Years Love - NamDuc
-        7. Hoa Không Đến Vườn Demo
-        8. Họa Mây Cố Giang Tình 2
-        9. Thiệp Hồng Người Dưng Lofi
-        10. Chuyện Đôi Ta Lofi
-        11. JACK J97 - LƯU NIÊN
-        12. Nắng Lung Linh - Nguyễn Thương
-        13. Phải Chăng Em Đã Yêu Remix
-        14. From The Start - Laufey
-        15. Em Có Biết Orinn Remix
-        16. Chạnh Lòng Thương Cô
-        17. Lofi Chill Gaming - Lukrembo
-      
-      Các lệnh điều khiển:
-      • /nhac           - Bật / Tắt nhanh nhạc cá nhân (toggle)
-      • /nhac on (hoặc /nhac bat) - Bật nghe nhạc
-      • /nhac off (hoặc /nhac tat) - Tắt nhạc ngay lập tức
-      • /nhac list (hoặc /nhac ds) - Xem danh sách 17 bài hát và bài đang phát
-      • /nhac playing   - Xem bài hát hiện tại và thời gian còn lại
-      • /nhac next (/nhac skip) - Chuyển sang bài kế tiếp (dành cho OP/Admin)
-
-  # ==================================================
-  # 20. XOA ĐẦU HOẠT HÌNH (/patpat)
-  # ==================================================
-
-  - id: patpat_system
-    aliases:
-      - patpat
-      - /patpat
-      - xoa đầu
-      - xoa dau
-      - vỗ đầu
-      - vuốt đầu
-      - cưng nựng
-      - ban tay
-      - pat
-      - animation tay
-
-    title: Tính Năng Xoa Đầu Hoạt Hình (/patpat)
-
-    content: |
-      Server tích hợp tính năng PatPat xoa đầu hoạt hình siêu đáng yêu:
-      - Lệnh sử dụng: /patpat <tên_người_chơi>
-      - Hiệu ứng: Xuất hiện animation 5 khung hình bàn tay màu trắng (\uE300 đến \uE304) xoa đầu liên tục trên đầu bạn bè.
-      - Bàn tay luôn quay mặt về camera người nhìn (Billboard Center), phát âm thanh vỗ "patpat.pat" êm tai và bắn ra các hạt tim ngọt ngào.
-      - Hoạt động mượt mà 100% không lỗi trên cả Lunar Client (PC) lẫn Geyser Bedrock (Điện thoại) mà không bắt người chơi phải cài đặt bất kỳ bản mod nào!
-
-  # ==================================================
-  # 21. BANG HỘI / ĐỘI NHÓM (/team, /clan)
-  # ==================================================
-
-  - id: team_clan
-    aliases:
-      - team
-      - clan
-      - bang hội
-      - bang hoi
-      - đội nhóm
-      - /team
-      - /clan
-      - tao team
-      - vao team
-
-    title: Hệ Thống Bang Hội / Đội Nhóm (/team)
-
-    content: |
-      Server sử dụng plugin BetterTeams để gắn kết anh em chiến hữu:
-      - /team create <tên>   - Tạo một bang hội / team mới
-      - /team invite <tên>   - Mời thành viên vào team
-      - /team join <tên>     - Chấp nhận vào team
-      - /team leave          - Rời khỏi team hiện tại
-      - /team chat (hoặc /tc) - Chuyển sang kênh chat nội bộ team
-      - /team pvp            - Bật hoặc tắt PvP giữa các thành viên trong team
-      - /team info [tên]     - Xem thông tin chi tiết của team
-
-  # ==================================================
-  # 22. RESOURCE PACK SONG HÀNH PC & PE
-  # ==================================================
-
-  - id: resource_pack
-    aliases:
-      - resource pack
-      - texture pack
-      - pack
-      - cài pack
-      - pack radio
-      - pack bedrock
-      - mcpack
-      - lỗi ô vuông
-      - hiện icon
-      - mô hình 3d
-
-    title: Resource Pack Song Hành (PC Lunar & PE Bedrock)
-
-    content: |
-      Hệ thống Resource Pack KhangSMP hoạt động hoàn toàn tự động và đồng bộ đa nền tảng:
-      • Bản PC (Java / Lunar Client):
-        Tự động tải khi kết nối server (lưu trữ trên GitHub Release repo PackRadio - PikaFrostbite-Java.zip). Bao gồm đầy đủ mô hình 3D vũ khí, âm thanh 17 bài hát và font huy hiệu bitmap.
-      • Bản PE (Bedrock / Điện thoại):
-        Đã được nạp sẵn trực tiếp vào Geyser (PikaMC-Bedrock.mcpack). Người chơi vào bằng điện thoại sẽ tự động hiển thị mượt mà mọi icon, badge mà không bị lỗi font hay ô vuông.
-
-  # ==================================================
-  # 23. CHẾ ĐỘ CHƠI (GAME MODES) & NHỮNG GÌ SERVER KHÔNG CÓ
-  # ==================================================
-
-  - id: game_modes_scope
-    aliases:
-      - chế độ
-      - che do
-      - game mode
-      - gamemode
-      - survival
-      - sinh tồn
-      - sinh ton
-      - oneblock
-      - one block
-      - 1 block
-      - skyblock
-      - sky block
-      - bedwars
-      - bed wars
-      - minigame
-      - mini game
-      - mini games
-      - prison
-      - gens
-      - generator
-      - anarchy
-      - towny
-
-    title: Chế Độ Chơi KhangSMP & Những Gì Server KHÔNG CÓ
-
-    content: |
-      CHẾ ĐỘ CHƠI DUY NHẤT:
-      - KhangSMP là máy chủ SINH TỒN (Survival SMP / Vanilla+) thuần túy trên Paper 1.21.4.
-      - Lối chơi tập trung vào: Khám phá thế giới rộng lớn, đào khoáng sản, xây dựng công trình, bảo vệ đất đai bằng Xẻng Vàng (/claim), kết nối bang hội (/team), chặt cây nhanh (/timber), và thư giãn cùng Studio Nhạc Lofi (/nhac).
-
-      NHỮNG CHẾ ĐỘ MÁY CHỦ TUYỆT ĐỐI KHÔNG CÓ:
-      - KHÔNG CÓ OneBlock (Server không có map 1 block nào cả).
-      - KHÔNG CÓ SkyBlock (Không có đảo trên trời).
-      - KHÔNG CÓ Bedwars, Skywars, Eggwars hay các minigame đối kháng.
-      - KHÔNG CÓ Prison, Gens, BoxPvP hay Towny riêng biệt.
-
-      QUY TẮC PHẢN HỒI:
-      Nếu ai hỏi server có OneBlock, SkyBlock, Bedwars hay mini-game nào không:
-      Khẳng định dứt khoát: "KhangSMP là máy chủ Sinh Tồn (Survival SMP) thuần túy, hiện tại KHÔNG CÓ chế độ [X] nha bạn! Server tập trung trải nghiệm sinh tồn, xây dựng cày cuốc, bảo vệ đất và lập team /team chiến đấu cùng bạn bè."
-
-  # ==================================================
-  # 24. CƠ CHẾ FARM & TÍNH NĂNG SINH TỒN
-  # ==================================================
-
-  - id: mechanics_farms
-    aliases:
-      - farm
-      - máy ấp trứng
-      - may ap trung
-      - ấp trứng
-      - ap trung
-      - trứng gà
-      - trung ga
-      - nuôi gà
-      - nuoi ga
-      - spawner
-      - lồng spawn
-      - long spawn
-      - auto farm
-      - farm tự động
-
-    title: Cơ Chế Farm & Chăn Nuôi Trên KhangSMP
-
-    content: |
-      Cơ chế farm và chăn nuôi trên KhangSMP hoàn toàn tuân theo cơ chế Minecraft Vanilla gốc 1.21.4 (Paper):
-      - Động vật (gà, bò, cừu, heo) sinh sản và đẻ trứng tự nhiên khi được cho ăn hạt giống/lúa mì/cà rốt theo luật gốc của Minecraft.
-      - TUYỆT ĐỐI KHÔNG CÓ "máy ấp trứng tự động", không có lệnh mua bán trứng ảo hay tính năng hack farm trong /menu.
-      - Người chơi muốn farm trứng hoặc thực phẩm phải tự tay xây chuồng trại thủ công bằng phễu (hopper), nước và redstone vanilla.
-      - Không sử dụng các phần mềm gian lận, auto click hay dupe đồ (hệ thống BetterAntiDupe sẽ phát hiện và xử lý ngay).
 
+    Địa chỉ IP (Java & Bedrock):
+
+    ripple.pikamc.vn
+
+
+    Port:
+
+    Cả Java & Bedrock/PE: 25084 (IP: ripple.pikamc.vn)
+
+
+    Phiên bản hỗ trợ:
+
+    Minecraft Java 1.16 trở lên + Bedrock/PE (qua Geyser/Floodgate)
+
+
+    Chủ server / Owner / Admin:
+
+    Phan Trọng Khang (khangmc_vn)
+
+
+    Discord chính thức:
+
+    https://discord.gg/4afmVDmy2
+
+
+    TikTok của Owner:
+
+    @phantrongkhangg
+
+
+    Mọi thông báo bảo trì, cập nhật và sự kiện đều được đăng trên Discord.
+
+    '
+- id: getting_started
+  aliases:
+  - newbie
+  - người mới
+  - tân thủ
+  - bắt đầu
+  - hướng dẫn
+  - chơi như thế nào
+  - kit
+  - mới vào
+  title: Hướng dẫn người chơi mới
+  content: 'Khi mới vào server lần đầu, bạn sẽ nhận được:
+
+    - Chào mừng trang trọng toàn server + pháo hoa
+
+    - Hướng dẫn lệnh hữu ích gửi riêng
+
+
+    Bảo vệ tân thủ (60 phút đầu):
+
+    - Bạn KHÔNG thể bị PvP trong 60 phút đầu tiên
+
+    - Dùng /baove để xem thời gian bảo vệ còn lại
+
+
+    Bước bắt đầu:
+
+    1. Dùng /redeem denbu2 và /redeem denbu3 để nhận quà tân thủ + 800 claim blocks
+
+    2. Dùng /rtp để dịch chuyển ngẫu nhiên ra ngoài Spawn
+
+    3. Xây nhà, dùng Xẻng Vàng Claim đất để bảo vệ
+
+    4. Đặt /sethome để về nhà nhanh
+
+    5. Gõ /daily để nhận quà hằng ngày (Kim Cương, Tiền, Táo Vàng...)
+
+    6. Mở /menu để xem tất cả tính năng
+
+
+    Lưu ý quan trọng:
+
+    - Claim blocks ban đầu: 800 (từ redeem) + tích lũy theo thời gian chơi
+
+    - Rank chỉ do Admin cấp, không thể mua
+
+    - Server KHÔNG có Keep Inventory (cẩn thận khi chết!)
+
+    - Cooldown lệnh dịch chuyển: 3 giây
+
+    '
+- id: commands
+  aliases:
+  - command
+  - commands
+  - lệnh
+  - help
+  - lệnh gì
+  title: Các lệnh cơ bản
+  content: '=== Menu chính ===
+
+    /menu             - Mở bảng điều khiển nhanh (GUI)
+
+
+    === Giao thương & Kinh tế ===
+
+    /shop             - Mở Cửa Hàng mua bán vật phẩm với server
+
+    /sellgui          - Mở rương thông minh để bán nhanh đồ thừa lấy tiền
+
+    /ah hoặc /choden  - Mở Sàn Giao Dịch Chợ Đen giữa người chơi
+
+    /ah sell <giá>    - Đăng bán đồ lên Chợ Đen (bắt buộc bấm nút Xác Nhận trong Menu)
+
+    /ah claim         - Nhận tiền mặt khi bán được đồ trên Chợ Đen
+
+    /bal              - Xem số dư tiền hiện tại trong tài khoản
+
+    /pay <tên> <tiền> - Chuyển tiền an toàn cho người chơi khác
+
+    /baltop           - Bảng xếp hạng phú hào giàu nhất server
+
+
+    === Nhạc nền server ===
+
+    /nhac on          - Bật nghe nhạc nền cho bản thân
+
+    /nhac off         - Tắt nghe nhạc nền cho bản thân
+
+    /nhac check       - Xem bài đang phát và thời gian còn lại
+
+    /nhac list        - Xem danh sách 15 bài hát
+
+
+    === Dịch chuyển ===
+
+    /spawn            - Về Spawn
+
+    /rtp              - Dịch chuyển ngẫu nhiên (Overworld)
+
+    /home [tên]       - Về Home
+
+    /homes            - Xem danh sách Home
+
+    /sethome [tên]    - Đặt Home
+
+    /delhome [tên]    - Xóa Home
+
+    /back             - Quay lại vị trí vừa chết
+
+
+    === TPA ===
+
+    /tpa <tên>        - Gửi yêu cầu dịch chuyển
+
+    /tpaccept         - Chấp nhận
+
+    /tpdeny           - Từ chối
+
+
+    === Tiện ích & Giải trí ===
+
+    /msg <tên>        - Nhắn tin riêng
+
+    /reply            - Trả lời người vừa nhắn
+
+    /daily            - Nhận quà hằng ngày
+
+    /tx               - Sòng bạc Tài Xỉu 1 chạm
+
+    /baove            - Xem trạng thái bảo vệ tân thủ (60 phút miễn PvP)
+
+    /report <tên> <lý do> - Báo cáo người vi phạm cho Admin
+
+    /timber           - Bật/tắt chặt cả cây 1 nhát
+
+    /veinminer        - Bật/tắt đào cả cụm quặng (/vm)
+
+    /sit, /lay, /crawl - Ngồi, nằm, trườn
+
+    /sb               - Bật/tắt bảng điểm Scoreboard'
+- id: claim
+  aliases:
+  - claim
+  - grief
+  - griefprevention
+  - xẻng vàng
+  - golden shovel
+  - bảo vệ đất
+  - claimslist
+  - claim block
+  title: Claim đất (GriefPrevention)
+  content: 'Server sử dụng plugin GriefPrevention để bảo vệ đất đai.
+
+
+    Cách tạo Claim:
+
+    - Cầm Xẻng Vàng (Golden Shovel)
+
+    - Chuột phải vào hai góc đối diện của khu vực cần bảo vệ
+
+
+    Claim Blocks:
+
+    - Nhận 800 blocks từ /redeem denbu2 + /redeem denbu3
+
+    - Tích lũy thêm theo thời gian chơi online
+
+
+    Các lệnh quản lý:
+
+    /trust <tên>           - Cho phép xây dựng
+
+    /untrust <tên>         - Thu hồi quyền
+
+    /accesstrust <tên>     - Cho phép dùng cửa, nút
+
+    /containertrust <tên>  - Cho phép mở rương
+
+    /trustlist             - Xem danh sách quyền
+
+    /abandonclaim          - Xóa Claim đang đứng
+
+    /abandonallclaims      - Xóa toàn bộ Claim
+
+    /claimslist            - Xem số blocks đã dùng/còn lại
+
+    '
+- id: ranks
+  aliases:
+  - rank
+  - cấp bậc
+  - lên rank
+  - thăng cấp
+  title: Rank trên KhangSMP
+  content: 'Các rank hiện tại:
+
+    • Member   - Rank mặc định khi vào server
+
+    • Admin    - Quản trị viên
+
+    • Owner    - Chủ server (Phan Trọng Khang)
+
+
+    Rank đặc biệt (do Admin cấp tay):
+
+    Manager, Famous, Discord, Helper, TheEgg
+
+
+    Lưu ý:
+
+    - Rank chỉ do Owner/Admin cấp trực tiếp
+
+    - Không thể mua Rank bằng tiền thật hoặc tiền trong game
+
+    '
+- id: daily
+  aliases:
+  - daily
+  - điểm danh
+  - quà ngày
+  - quà hằng ngày
+  - quangay
+  - diemdanh
+  - nhận quà hàng ngày
+  title: Điểm Danh Hằng Ngày (/daily)
+  content: 'Mỗi 24 giờ bạn có thể nhận quà miễn phí một lần.
+
+
+    Cách nhận:
+
+    - /daily hoặc /quangay hoặc /diemdanh
+
+    - Hoặc mở /menu → bấm icon Rương 🎁
+
+
+    Quà nhận được mỗi ngày:
+
+    - +10,000$ tiền mặt
+
+    - 5 Kim Cương
+
+    - 3 Táo Vàng Enchant
+
+    - 16 Tên Lửa (Firework Rocket)
+
+    - 16 Thịt Bò Nướng
+
+    '
+- id: taixiu
+  aliases:
+  - tài xỉu
+  - taixiu
+  - tx
+  - cá cược
+  - sòng bạc
+  - cờ bạc
+  - xúc xắc
+  - đặt cược
+  title: Sòng Bạc Tài Xỉu (/tx)
+  content: 'Mini-game cá cược xúc xắc 1 chạm, cực dễ chơi.
+
+
+    Cách chơi:
+
+    1. Gõ /tx hoặc mở /menu → icon Vàng 🎲
+
+    2. Chọn mức tiền cược (1K đến TẤT TAY)
+
+    3. Bấm ĐẶT TÀI (đỏ) hoặc ĐẶT XỈU (xanh)
+
+    4. Chờ 10 giây đếm ngược xem Action Bar
+
+    5. Kết quả hiện to giữa màn hình!
+
+
+    Luật chơi:
+
+    - TÀI: Tổng 3 xúc xắc từ 11-18 điểm
+
+    - XỈU: Tổng 3 xúc xắc từ 3-10 điểm
+
+    - Tỉ lệ thắng: 1 ăn 1.8 (đã trừ 10% thuế nhà cái)
+
+    - Giới hạn: mỗi người tối đa 1 lần / 2 giờ
+
+    '
+- id: newbie_protection
+  aliases:
+  - bảo vệ tân thủ
+  - baove
+  - protection
+  - miễn pvp
+  - không bị đánh
+  - pvp mới vào
+  title: Bảo Vệ Tân Thủ (/baove)
+  content: 'Khi lần đầu vào KhangSMP, được bảo vệ hoàn toàn khỏi PvP trong 60 phút.
+
+
+    Trong thời gian bảo vệ:
+
+    - Không ai gây sát thương được cho bạn
+
+    - Bạn cũng không thể tấn công người khác
+
+
+    Xem trạng thái:
+
+    /baove hoặc /protection hoặc /newbie
+
+    '
+- id: pvp
+  aliases:
+  - pvp
+  - đánh nhau
+  - combat
+  - bị giết
+  - pk
+  title: PvP
+  content: 'Server có bật PvP ngoài vùng Spawn.
+
+
+    Quy tắc:
+
+    - Không được PvP trong khu vực Spawn
+
+    - Không được PvP trong Claim của người khác
+
+    - Tân thủ mới vào được bảo vệ 60 phút đầu
+
+    - Bắt nạt tân thủ sẽ bị xử lý theo nội quy
+
+    '
+- id: timber
+  aliases:
+  - timber
+  - chặt cây
+  - chặt nhanh
+  - chatcay
+  - cưa cây
+  title: Chặt Cây Nhanh (/timber)
+  content: 'Chặt cả cây chỉ bằng 1 nhát rìu (tối đa 30 block gỗ).
+
+    Rìu hao mòn tương ứng với số gỗ bị phá.
+
+
+    Bật/tắt: /timber hoặc /chatcay
+
+    '
+- id: report
+  aliases:
+  - report
+  - báo cáo
+  - tố cáo
+  - vi phạm
+  title: Báo Cáo Vi Phạm (/report)
+  content: '/report <tên người chơi> <lý do>
+
+
+    Ví dụ: /report PE_xxx hack speed
+
+
+    Thông báo ngay đến Admin online, được lưu lại để Admin xem bằng /reports.
+
+    '
+- id: redeem
+  aliases:
+  - redeem
+  - code
+  - mã thưởng
+  - denbu
+  - quà code
+  title: Redeem Code (Mã Thưởng)
+  content: '/redeem denbu2 - 32 Kim Cương, 4 Netherite Scrap, 3 Táo Vàng, 64 Tên Lửa,
+    30 Level, +50,000$
+
+    /redeem denbu3 - +800 Claim Blocks
+
+
+    Mỗi code chỉ dùng 1 lần / người. Theo dõi Discord để nhận code mới.
+
+    '
+- id: faq
+  aliases:
+  - faq
+  - câu hỏi thường gặp
+  - lỗi
+  - không được
+  - tại sao
+  title: FAQ - Câu hỏi thường gặp
+  content: 'Không phá được block?
+
+    → Bạn đang ở Spawn hoặc trong Claim của người khác.
+
+
+    Không mở được rương / cửa?
+
+    → Chưa được chủ Claim cấp quyền /containertrust hoặc /accesstrust.
+
+
+    Không Claim được?
+
+    → Claim bị chồng, ở vùng cấm, hoặc hết claim blocks. Kiểm tra: /claimslist
+
+
+    Có mất đồ khi chết không?
+
+    → CÓ. Server KHÔNG có Keep Inventory. Hãy cẩn thận!
+
+
+    Bị người khác đánh khi mới vào?
+
+    → /baove để xem thời gian bảo vệ tân thủ còn lại.
+
+
+    Shop ở đâu?
+
+    → Chưa có NPC Shop. Dùng /tx để chơi Tài Xỉu kiếm tiền!
+
+
+    Cần hỗ trợ?
+
+    → Discord: https://discord.gg/4afmVDmy2
+
+    '
+- id: rules
+  aliases:
+  - nội quy
+  - rules
+  - hack
+  - cheat
+  - vi phạm
+  - cấm
+  title: Nội quy Server
+  content: 'Nghiêm cấm:
+
+    • Hack / Cheat / Client bất hợp pháp
+
+    • Bug Abuse, Duplication, Grief
+
+    • Spam chat, chửi thề tục tĩu (bị Thiên Kiếp Sấm Sét 1 phút!)
+
+    • Quảng cáo server khác
+
+    • Bắt nạt tân thủ / người mới
+
+    • Lừa đảo, chiếm đoạt tài sản
+
+
+    Vi phạm: cảnh cáo → mute → kick → ban.
+
+    '
+- id: contact
+  aliases:
+  - discord
+  - liên hệ
+  - support
+  - tiktok
+  - hỗ trợ
+  title: Liên hệ & Hỗ trợ
+  content: 'Discord: https://discord.gg/4afmVDmy2
+
+    Chủ server: Phan Trọng Khang
+
+    TikTok: @phantrongkhangg
+
+    '
+- id: plugins
+  aliases:
+  - plugin
+  - plugins
+  - hệ thống
+  title: Plugin đang sử dụng
+  content: 'Server Paper 1.21.4, Bedrock/PE qua Geyser + Floodgate.
+
+
+    Tính năng & Plugin nổi bật:
+
+    - MusicKhangSMP: Hệ thống nhạc nền tự động 15 bài xoay vòng liên tục toàn server
+    (/nhac, /nhacad).
+
+    - zAuctionHouseV3: Sàn giao dịch Chợ Đen tự do giữa người chơi (/ah, /choden).
+
+    - EconomyShopGUI-Premium: Cửa hàng /shop và rương bán nhanh /sellgui (Dynamic
+    Pricing tự động hồi giá mỗi 3 phút).
+
+    - GriefPrevention: Claim đất chống phá hoại bằng Xẻng Vàng.
+
+    - VeinMiner: Đào quặng nhanh cả cụm (/vm).
+
+    - Tài Xỉu 1 Chạm (/tx).
+
+    - Điểm Danh Hằng Ngày (/daily).
+
+    - Bảo Vệ Tân Thủ 60 phút (/baove).
+
+    - Chặt Cây Nhanh (/timber).
+
+    - 1 Người Ngủ Qua Đêm.
+
+    - Thiên Kiếp Sấm Sét (chống chửi thề).
+
+    - Báo Cáo Vi Phạm (/report).
+
+    - Redeem Code (/redeem).
+
+    - GrimAC (Anti-cheat), LuckPerms, TAB, DriveBackupV2...'
+- id: veinminer
+  aliases:
+  - veinminer
+  - đào quặng nhanh
+  - vein mine
+  - vm
+  title: VeinMiner (Đào quặng nhanh)
+  content: 'Giữ Shift + dùng dụng cụ phù hợp đập vào quặng/gỗ để phá toàn bộ dải cùng
+    loại.
+
+    /veinminer toggle - Bật/tắt VeinMiner
+
+    '
+- id: sit_ride
+  aliases:
+  - ngồi
+  - nằm
+  - sit
+  - gsit
+  - cưỡi đầu
+  - rideonhead
+  - leo lên đầu
+  title: Ngồi, Nằm & Cưỡi Đầu
+  content: 'Ngồi / Nằm (GSit):
+
+    - PE: Nhấn giữ vào mặt đất để ngồi; vuốt xuống để nằm
+
+    - Java: Shift + Chuột phải vào mặt đất
+
+
+    Cưỡi lên đầu người khác:
+
+    - PE: Nhấn giữ vào người chơi khác
+
+    - Java: Chuột phải vào người chơi khác
+
+    - Nhấn Shift để xuống
+
+
+    Chặn người khác cưỡi: /ride blacklist
+
+    '
+- id: music_system
+  aliases:
+  - nhac
+  - nhạc
+  - music
+  - bài hát
+  - bai hat
+  - nhacnen
+  - nhạc nền
+  - nhacad
+  - am thanh
+  - âm thanh
+  title: Hệ Thống Nhạc Nền Tự Động Toàn Server KhangSMP (/nhac)
+  content: "KhangSMP sở hữu hệ thống phát nhạc nền tự động độc quyền (plugin MusicKhangSMP)\
+    \ phủ sóng toàn bộ server:\n- Tự động phát nhạc xoay vòng liên tục cho toàn thể\
+    \ người chơi online (bài trước hết giờ tự động sang bài kế tiếp).\n- Âm nhạc chất\
+    \ lượng cao chuẩn Ogg Vorbis, đồng bộ thời gian thực cho cả người chơi Java và\
+    \ Bedrock/PE.\n- Danh sách 15 bài hát cực đỉnh (hơn 62 phút nghe không ngừng nghỉ):\n\
+    \  1. Tinh Vệ (Bản Hí, Hợp Xướng) [04:19]\n  2. Đáy Biển (Hải Đới) [04:15]\n \
+    \ 3. Xích Linh (Lý Ngọc Cương) [04:57]\n  4. Rainy Love (DJ Remix) [03:17]\n \
+    \ 5. Từ Khóa (DJ Remix) [05:03]\n  6. Biển, Đảo Và Em [00:51]\n  7. Từ Cửu Môn\
+    \ Hồi Ức (Giải Ngữ Hoa) [03:50]\n  8. Thanh Y (Cổ Phong Hí Khúc) [04:10]\n  9.\
+    \ Du Kinh (Du Kinh Ký) [05:58]\n  10. Lucky Go Girl [05:19]\n  11. Illusionary\
+    \ Daytime x Trackmaker [02:26]\n  12. Cry For Me (Michita ft. Ami) [04:59]\n \
+    \ 13. Đảo Không Người (MinhXT2nd Remix) [03:47]\n  14. Powfu - death bed (Slowed\
+    \ + Reverb) [03:53]\n  15. Take Me Hand (DAISHI DANCE ft. Cécile) [05:20]\n\n\
+    Các lệnh điều khiển dành cho người chơi (Member):\n• /nhac on        - Bật nghe\
+    \ nhạc nền cho bản thân\n• /nhac off       - Tắt nghe nhạc nền cho bản thân (im\
+    \ lặng, lưu vĩnh viễn lựa chọn)\n• /nhac check     - Xem bài hát đang phát, tiến\
+    \ độ thời gian thực và thanh tiến trình trực quan\n• /nhac list      - Xem danh\
+    \ sách 15 bài hát kèm thời lượng\n* Lưu ý: Người chơi thông thường không có quyền\
+    \ tự ý next hoặc skip bài để tránh làm gián đoạn mọi người.\n\nCác lệnh dành cho\
+    \ Admin / OP (/nhacad):\n• /nhacad on / off - Bật / Tắt hệ thống nhạc nền toàn\
+    \ server\n• /nhacad next    - Chuyển ngay sang bài kế tiếp\n• /nhacad check  \
+    \ - Kiểm tra trạng thái hệ thống\n• /nhacad list    - Danh sách 15 bài hát\n•\
+    \ /nhacad reload  - Nạp lại cấu hình config.yml"
+- id: patpat_system
+  aliases:
+  - patpat
+  - /patpat
+  - xoa đầu
+  - xoa dau
+  - vỗ đầu
+  - vuốt đầu
+  - cưng nựng
+  - ban tay
+  - pat
+  - animation tay
+  title: Tính Năng Xoa Đầu Hoạt Hình (/patpat)
+  content: 'Server tích hợp tính năng PatPat xoa đầu hoạt hình siêu đáng yêu:
+
+    - Lệnh sử dụng: /patpat <tên_người_chơi>
+
+    - Hiệu ứng: Xuất hiện animation 5 khung hình bàn tay màu trắng (\uE300 đến \uE304)
+    xoa đầu liên tục trên đầu bạn bè.
+
+    - Bàn tay luôn quay mặt về camera người nhìn (Billboard Center), phát âm thanh
+    vỗ "patpat.pat" êm tai và bắn ra các hạt tim ngọt ngào.
+
+    - Hoạt động mượt mà 100% không lỗi trên cả Lunar Client (PC) lẫn Geyser Bedrock
+    (Điện thoại) mà không bắt người chơi phải cài đặt bất kỳ bản mod nào!
+
+    '
+- id: team_clan
+  aliases:
+  - team
+  - clan
+  - bang hội
+  - bang hoi
+  - đội nhóm
+  - /team
+  - /clan
+  - tao team
+  - vao team
+  title: Hệ Thống Bang Hội / Đội Nhóm (/team)
+  content: 'Server sử dụng plugin BetterTeams để gắn kết anh em chiến hữu:
+
+    - /team create <tên>   - Tạo một bang hội / team mới
+
+    - /team invite <tên>   - Mời thành viên vào team
+
+    - /team join <tên>     - Chấp nhận vào team
+
+    - /team leave          - Rời khỏi team hiện tại
+
+    - /team chat (hoặc /tc) - Chuyển sang kênh chat nội bộ team
+
+    - /team pvp            - Bật hoặc tắt PvP giữa các thành viên trong team
+
+    - /team info [tên]     - Xem thông tin chi tiết của team
+
+    '
+- id: resource_pack
+  aliases:
+  - resource pack
+  - texture pack
+  - pack
+  - cài pack
+  - pack radio
+  - pack bedrock
+  - mcpack
+  - lỗi ô vuông
+  - hiện icon
+  - mô hình 3d
+  title: Resource Pack Song Hành (PC Lunar & PE Bedrock)
+  content: "Hệ thống Resource Pack KhangSMP hoạt động hoàn toàn tự động, siêu nhẹ\
+    \ và đồng bộ đa nền tảng:\n• Bản PE (Bedrock / Điện thoại):\n  Đã được tối ưu\
+    \ hóa cực đỉnh (chỉ còn 0.67 KB) và nạp sẵn trực tiếp vào Geyser (KhangSMP-Playlist-Bedrock.mcpack\
+    \ v1.7.0). Người chơi vào bằng điện thoại kết nối tức thì, hiển thị chuẩn xác\
+    \ mọi icon, badge, không bị lỗi font hay ô vuông.\n• Bản PC (Java / Lunar Client):\n\
+    \  Dung lượng siêu nhẹ (chỉ 5.4 MB), tự động tải khi kết nối server. Đã gỡ bỏ\
+    \ bài nhạc chiến trận nặng 20MB, giúp người chơi tải pack trong chớp mắt mà vẫn\
+    \ thưởng thức trọn vẹn mô hình 3D vũ khí và âm thanh sắc nét."
+- id: game_modes_scope
+  aliases:
+  - chế độ
+  - che do
+  - game mode
+  - gamemode
+  - survival
+  - sinh tồn
+  - sinh ton
+  - oneblock
+  - one block
+  - 1 block
+  - skyblock
+  - sky block
+  - bedwars
+  - bed wars
+  - minigame
+  - mini game
+  - mini games
+  - prison
+  - gens
+  - generator
+  - anarchy
+  - towny
+  title: Chế Độ Chơi KhangSMP & Những Gì Server KHÔNG CÓ
+  content: 'CHẾ ĐỘ CHƠI DUY NHẤT:
+
+    - KhangSMP là máy chủ SINH TỒN (Survival SMP / Vanilla+) thuần túy trên Paper
+    1.21.4.
+
+    - Lối chơi tập trung vào: Khám phá thế giới rộng lớn, đào khoáng sản, xây dựng
+    công trình, bảo vệ đất đai bằng Xẻng Vàng (/claim), kết nối bang hội (/team),
+    chặt cây nhanh (/timber), và thư giãn cùng Studio Nhạc Lofi (/nhac).
+
+
+    NHỮNG CHẾ ĐỘ MÁY CHỦ TUYỆT ĐỐI KHÔNG CÓ:
+
+    - KHÔNG CÓ OneBlock (Server không có map 1 block nào cả).
+
+    - KHÔNG CÓ SkyBlock (Không có đảo trên trời).
+
+    - KHÔNG CÓ Bedwars, Skywars, Eggwars hay các minigame đối kháng.
+
+    - KHÔNG CÓ Prison, Gens, BoxPvP hay Towny riêng biệt.
+
+
+    QUY TẮC PHẢN HỒI:
+
+    Nếu ai hỏi server có OneBlock, SkyBlock, Bedwars hay mini-game nào không:
+
+    Khẳng định dứt khoát: "KhangSMP là máy chủ Sinh Tồn (Survival SMP) thuần túy,
+    hiện tại KHÔNG CÓ chế độ [X] nha bạn! Server tập trung trải nghiệm sinh tồn, xây
+    dựng cày cuốc, bảo vệ đất và lập team /team chiến đấu cùng bạn bè."
+
+    '
+- id: mechanics_farms
+  aliases:
+  - farm
+  - máy ấp trứng
+  - may ap trung
+  - ấp trứng
+  - ap trung
+  - trứng gà
+  - trung ga
+  - nuôi gà
+  - nuoi ga
+  - spawner
+  - lồng spawn
+  - long spawn
+  - auto farm
+  - farm tự động
+  title: Cơ Chế Farm & Chăn Nuôi Trên KhangSMP
+  content: 'Cơ chế farm và chăn nuôi trên KhangSMP hoàn toàn tuân theo cơ chế Minecraft
+    Vanilla gốc 1.21.4 (Paper):
+
+    - Động vật (gà, bò, cừu, heo) sinh sản và đẻ trứng tự nhiên khi được cho ăn hạt
+    giống/lúa mì/cà rốt theo luật gốc của Minecraft.
+
+    - TUYỆT ĐỐI KHÔNG CÓ "máy ấp trứng tự động", không có lệnh mua bán trứng ảo hay
+    tính năng hack farm trong /menu.
+
+    - Người chơi muốn farm trứng hoặc thực phẩm phải tự tay xây chuồng trại thủ công
+    bằng phễu (hopper), nước và redstone vanilla.
+
+    - Không sử dụng các phần mềm gian lận, auto click hay dupe đồ (hệ thống BetterAntiDupe
+    sẽ phát hiện và xử lý ngay).
+
+    '
+- id: choden_auctionhouse
+  aliases:
+  - choden
+  - chợ đen
+  - cho den
+  - ah
+  - auction
+  - đấu giá
+  - dau gia
+  - mua bán người chơi
+  - bán đồ
+  - ban do
+  title: Sàn Đấu Giá & Giao Dịch Chợ Đen (/ah, /choden)
+  content: 'Sàn Giao Dịch Chợ Đen (/ah hoặc /choden) là nơi giao thương tự do giữa
+    người chơi với người chơi trên KhangSMP:
+
+
+    1. Cách vào xem & mua đồ:
+
+    • Gõ /ah hoặc /choden để mở giao diện sàn giao dịch.
+
+    • Dùng lệnh /ah search <tên> để tìm nhanh món đồ cần mua (kiếm, giáp, sách phép,
+    cánh...).
+
+    • Nhấp vào món đồ muốn mua ➔ Bấm nút ''Xác Nhận Mua'' trong Menu là đồ về túi
+    ngay lập tức.
+
+
+    2. Cách đăng bán đồ chuẩn 3 bước:
+
+    • Bước 1: Cầm món đồ muốn bán trên tay chính (không để tay trống).
+
+    • Bước 2: Gõ lệnh: /ah sell <giá_tiền> (hoặc /ah ban <giá>).
+
+    • Bước 3 (BẮT BUỘC): Sau khi gõ lệnh, hệ thống mở ra Menu Xác Nhận. Bạn PHẢI BẤM
+    VÀO NÚT ''XÁC NHẬN'' trong Menu thì món đồ mới chính thức lên sàn! (Nếu đóng Menu
+    mà chưa bấm xác nhận là đồ chưa lên sàn).
+
+    • Đồ được niêm yết trên sàn trong 48 giờ.
+
+
+    3. Cách nhận tiền bán đồ:
+
+    • Khi có người mua, hệ thống sẽ thông báo in-game.
+
+    • Gõ lệnh /ah claim để nhận tiền vào tài khoản (thuế sàn 5% tự động khấu trừ để
+    bảo vệ kinh tế máy chủ).
+
+
+    4. Các lệnh quản lý tiện ích:
+
+    • /ah items: Xem các món đồ bạn đang rao bán (có thể nhấp vào để hủy bán và lấy
+    lại đồ).
+
+    • /ah expire: Kho chứa đồ hết hạn sau 48h hoặc đồ đã hủy bán để lấy lại an toàn.
+
+    • /ah history: Xem lịch sử các giao dịch mua bán của bản thân.
+
+
+    5. Quy định:
+
+    • Mỗi người chơi được treo tối đa 5 món đồ cùng lúc.
+
+    • Giá niêm yết tối thiểu: $10 xu.
+
+    • Cánh Elytra: Đã tắt bán ở /shop, chỉ có thể mua bán tự do giữa người chơi với
+    nhau trên Chợ Đen (/ah)!'
+- id: economy_shop
+  aliases:
+  - shop
+  - cửa hàng
+  - cua hang
+  - sellgui
+  - bán đồ shop
+  - mua đồ
+  - kiếm tiền
+  - kiem tien
+  - tiền
+  - money
+  title: Hệ Thống Cửa Hàng /shop & Rương Bán Nhanh /sellgui
+  content: 'Hệ thống Cửa Hàng mua bán vật phẩm chính thức của KhangSMP:
+
+
+    1. Cách mua sắm từ Shop (/shop):
+
+    • Gõ lệnh /shop để mở giao diện cửa hàng.
+
+    • Chọn danh mục cần mua: Khoáng Sản, Nông Sản, Công Cụ, Vật Liệu Xây Dựng, Đồ
+    Quái Rơi...
+
+    • Có thể gõ /shop search <tên> để tìm kiếm siêu nhanh.
+
+    • Hàng mới cập nhật: Đèn Ếch (Froglight 3 màu: Vàng, Xanh, Tím), Đạn Gió Lốc (Wind
+    Charge), Que Gió (Breeze Rod).
+
+
+    2. Cách bán đồ nhanh qua rương thông minh (/sellgui):
+
+    • Gõ lệnh /sellgui để mở rương rỗng.
+
+    • Kéo thả toàn bộ nông sản, khoáng sản, đồ thừa muốn bán vào rương.
+
+    • Đóng rương lại (nhấn ESC hoặc dấu X) là tiền tự động cộng thẳng vào tài khoản
+    kèm thông báo chi tiết!
+
+    • Món đồ nào không bán được sẽ trả lại an toàn vào túi đồ.
+
+
+    3. Cơ chế phục hồi giá thông minh (Dynamic Pricing):
+
+    • Giá bán nông sản và khoáng sản tự động điều chỉnh theo quy luật cung cầu.
+
+    • Cứ mỗi 3 phút, giá bán các mặt hàng sẽ tự động phục hồi tăng 2% để kích thích
+    kinh tế nông dân và thợ mỏ.
+
+
+    4. Lưu ý đặc biệt về Cánh Elytra:
+
+    • Cánh Elytra chỉ có thể mua từ /shop ($1,500,000 xu).
+
+    • Shop KHÔNG thu mua lại Cánh Elytra để chống lạm phát. Nếu muốn bán Cánh, hãy
+    dùng Chợ Đen (/ah) để bán cho người chơi khác!'
