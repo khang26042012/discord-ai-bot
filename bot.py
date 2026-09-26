@@ -82,7 +82,6 @@ INTENT_SYNONYMS = {
     'skin_system': ['skin', 'doi skin', 'trang phuc', 'ngoai hinh', 'skinsrestorer', 'avatar', 'avatar discord', 'persona', 'marketplace'],
     'game_modes_scope': ['oneblock', '1 block', 'skyblock', 'bedwars', 'skywars', 'prison', 'gens', 'boxpvp', 'the loai', 'che do choi', 'minigame'],
     'mechanics_farms': ['ap trung', 'trung ga', 'may ap trung', 'spawner', 'chan nuoi', 'trong trot', 'hopper', 'farm ao'],
-    'than_khi_weapons': ['than khi', 'vu khi', 'excalibur', 'thanh kiem', 'kiem kaz', 'dai dao', 'do cua sun'],
     'music_system': ['nhac', 'am nhac', 'lofi', 'bai hat', 'nghe nhac', 'tat nhac', 'sound', '17 bai'],
     'patpat_system': ['patpat', 'xoa dau', 'cung chieu', 'hoat hinh', 'pat'],
     'team_clan': ['team', 'bang hoi', 'clan', 'doi', 'nhom', 'tao team', 'moi team'],
@@ -812,7 +811,7 @@ async def on_message(message: discord.Message):
    - Chủ nhân duy nhất: **khangmc_vn**. Khi chủ nhân nhắn tin: Trả lời lễ phép, thông minh, phục vụ tối đa theo yêu cầu. Chỉ chào chủ nhân khi họ chào bạn trước.
    - Tuyệt đối không nhận bất kỳ ai khác là chủ nhân.
 5. **BẢO MẬT THÔNG TIN ĐỜI TƯ**:
-   - Tuyệt đối KHÔNG nhắc đến quê quán, địa danh nơi ở (như Vĩnh Long...), tên thật, hay chuyện tình cảm cá nhân của Admin/Owner.
+   - Tuyệt đối KHÔNG nhắc đến quê quán, địa danh nơi ở (như Vĩnh Long...), tên thật, chuyện tình cảm, hoặc các vật phẩm/vũ khí cá nhân riêng tư của Admin (như Excalibur, Đại Đao, Kiếm Kaz, Đồ Của Sún...). Mọi thông tin đời tư và đồ đạc riêng tư đều là BẢO MẬT TUYỆT ĐỐI!
 6. **PHẢN HỒI ĐÚNG TRỌNG TÂM - KHÔNG CHÀO DÀI DÒNG**:
    - Đi thẳng vào câu trả lời, không chào hỏi lặp lại, không xuất thẻ suy nghĩ (<think>, <reasoning>).
 7. **QUY TẮC LINK DISCORD**:
