@@ -54,9 +54,9 @@ _server_stats: dict = {}  # Latest server stats from MC plugin
 _server_stats_lock = asyncio.Lock()
 _ws_connections: set = set()  # Active WebSocket connections from MC servers
 
-ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-edf12b35e2ae5e24-plb8os-53982a47")
-ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/qwen/qwen3.7-plus:free")
+ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-xt-6851eddc8cd7b6765394f8da024867f63451b007cb54d2a2")
+ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://api.xkiro.com/v1")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "qwen/qwen3.7-plus:free")
 
 # Use ROUTER_* variables for the AI client
 XKIRO_API_KEY = ROUTER_API_KEY
@@ -587,7 +587,7 @@ HÃY:
                     {"role": "system", "content": task_prompt},
                     {"role": "user", "content": raw}
                 ],
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
+                extra_body={"chat_template_kwargs": {"enable_thinking": True}, "thinking": {"type": "enabled"}}
             )
             reply_text = resp.choices[0].message.content or ""
             reply_text = re.sub(r'<think>.*?</think>', '', reply_text, flags=re.DOTALL)
@@ -748,8 +748,8 @@ async def on_message(message: discord.Message):
         try:
             response = await ai_client.chat.completions.create(
                 model=XKIRO_MODEL,
-                temperature=0.2,
-                max_tokens=1800,
+                temperature=0.3,
+                max_tokens=2500,
                 messages=(lambda _kb_ctx: [
                     {"role": "system", "content": f"""# Role: KhangSMP Official AI Assistant (v2.2 Strict Grounding Shield)
 
@@ -794,7 +794,7 @@ async def on_message(message: discord.Message):
                         [{"type": "image_url", "image_url": {"url": img.url}} for img in _imgs]
                     ) if _imgs else f"[Người gửi: {message.author.name}]\n{message.content}")(image_attachments)},
                 ])(search_knowledge(message.content)),
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}, "thinking": {"type": "disabled"}, "reasoning": {"enabled": False, "exclude": True}}
+                extra_body={"chat_template_kwargs": {"enable_thinking": True}, "thinking": {"type": "enabled"}}
             )
             ai_reply = response.choices[0].message.content or ""
             
@@ -802,6 +802,7 @@ async def on_message(message: discord.Message):
             ai_reply = re.sub(r'<think>.*?</think>', '', ai_reply, flags=re.DOTALL)
             ai_reply = re.sub(r'<reasoning>.*?</reasoning>', '', ai_reply, flags=re.DOTALL)
             ai_reply = re.sub(r'<thinking>.*?</thinking>', '', ai_reply, flags=re.DOTALL)
+            ai_reply = re.sub(r'^.*?<\/think>', '', ai_reply, flags=re.DOTALL)
             ai_reply = ai_reply.strip()
             
             # Nếu vẫn rỗng, thử lấy từ delta content của response (nếu có)
