@@ -45,13 +45,13 @@ topics:
   - bat pack
   - geyser pack
   content: "- Java (PC): BẮT BUỘC TẢI TÀI NGUYÊN để tham gia server (hỗ trợ nghe 17\
-    \ bài nhạc /nhac, vũ khí Thánh Kiếm Excalibur 3D và icon giao diện chuẩn đẹp).\n\
-    \  + Hướng dẫn khi bị từ chối/bị kick: Ra ngoài màn hình danh sách Server -> Chọn\
-    \ KhangSMP -> Bấm 'Sửa' (Edit) -> Chuyển 'Gói tài nguyên máy chủ' (Server Resource\
-    \ Packs) sang 'Bật' (Enabled) hoặc 'Hỏi' (Prompt) -> Đăng nhập lại.\n- Bedrock/PE\
-    \ (Điện thoại): Đã được tối ưu tự động nạp gói KhangSMP_Geyser.mcpack siêu nhẹ,\
-    \ không bị kick, không bị đơ giật thiết bị.\n- Âm thanh & Model 3D: Cung cấp trải\
-    \ nghiệm thị giác và thính giác độc quyền của KhangSMP."
+    \ bài nhạc /nhac, icon giao diện chuẩn đẹp).\n  + Hướng dẫn khi bị từ chối/bị\
+    \ kick: Ra ngoài màn hình danh sách Server -> Chọn KhangSMP -> Bấm 'Sửa' (Edit)\
+    \ -> Chuyển 'Gói tài nguyên máy chủ' (Server Resource Packs) sang 'Bật' (Enabled)\
+    \ hoặc 'Hỏi' (Prompt) -> Đăng nhập lại.\n- Bedrock/PE (Điện thoại): Đã được tối\
+    \ ưu tự động nạp gói KhangSMP_Geyser.mcpack siêu nhẹ, không bị kick, không bị\
+    \ đơ giật thiết bị.\n- Âm thanh & Model 3D: Cung cấp trải nghiệm thị giác và thính\
+    \ giác độc quyền của KhangSMP."
 - id: realping_system
   title: Hệ Thống Đo & Hiển Thị Ping Thực Tế 100% (%realping_ping%)
   aliases:
@@ -130,22 +130,6 @@ topics:
     \ BÁO TÍNH NĂNG ẢO: Server KHÔNG CÓ 'máy ấp trứng tự động', không có menu bán\
     \ trứng tự nở ảo diệu. Mọi hoạt động sinh sản đều dựa trên luật vật lý và sinh\
     \ học của Minecraft gốc."
-- id: than_khi_weapons
-  title: Hệ Thống Thần Khí & Vũ Khí Huyền Thoại KhangSMP
-  aliases:
-  - than khi
-  - vu khi
-  - excalibur
-  - thanh kiem
-  - kiem kaz
-  - dai dao
-  - do cua sun
-  content: "- Các món Thần Khí tối thượng trên server:\n  + Thánh Kiếm Excalibur:\
-    \ Mô hình 3D Hoàng Kim độc quyền, hiệu ứng hào quang rực rỡ, sát thương sấm sét\
-    \ cuồng nộ.\n  + Đại Đao: Uy lực chém diện rộng uy mãnh.\n  + Kiếm Kaz: Kiếm sắc\
-    \ bén với tốc độ xuất chiêu kinh hoàng.\n  + Đồ Của Sún: Bộ giáp và trang bị đặc\
-    \ biệt của gia tộc.\n- Cơ chế bảo vệ Thần Khí: Thần khí được bảo vệ chống mất\
-    \ cắp, chống rớt đồ bất cẩn và chỉ những chiến binh xứng đáng mới có thể sở hữu."
 - id: music_system
   title: Studio Âm Nhạc KhangSMP (/nhac)
   aliases:
