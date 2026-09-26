@@ -13,9 +13,9 @@ from typing import Dict, List, Optional, Set, Any
 logger = logging.getLogger("NoiTuGame")
 
 # Environment variables - Shared with bot.py via ROUTER_* vars
-AI_MODEL = os.getenv("ROUTER_MODEL", "Xkiro/qwen/qwen3.7-plus:free")
-AI_API_KEY = os.getenv("ROUTER_API_KEY", "")
-AI_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://9router-production-efb2.up.railway.app/v1")
+AI_MODEL = os.getenv("ROUTER_MODEL", "qwen/qwen3.7-flash:free")
+AI_API_KEY = os.getenv("ROUTER_API_KEY", "sk-xt-6851eddc8cd7b6765394f8da024867f63451b007cb54d2a2")
+AI_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://api.xkiro.com/v1")
 NOITU_CHANNEL_ID_RAW = os.getenv("NOITU_CHANNEL_ID", "1547645186493120564")
 NOITU_CHANNEL_ID = int(NOITU_CHANNEL_ID_RAW) if NOITU_CHANNEL_ID_RAW and NOITU_CHANNEL_ID_RAW.isdigit() else 1547645186493120564
 
@@ -73,7 +73,12 @@ class AIClient:
         data: Dict[str, Any] = {
             "model": self.model,
             "messages": messages,
-            "temperature": temperature
+            "temperature": temperature,
+            "extra_body": {
+                "chat_template_kwargs": {"enable_thinking": False},
+                "thinking": {"type": "disabled"},
+                "reasoning": {"enabled": False, "exclude": True}
+            }
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
