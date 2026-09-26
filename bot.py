@@ -75,6 +75,33 @@ try:
 except Exception as e:
     logger.warning(f"Failed to load knowledge.yml: {e}")
 
+INTENT_SYNONYMS = {
+    'server_info': ['ip', 'port', 'dia chi', 'server', 'khangsmp', 'phien ban', 'java', 'bedrock', 'pe', 'ket noi', 'pc', 'cong'],
+    'resource_pack': ['pack', 'texture', 'tai nguyen', 'goi', 'resource pack', 'bi kick vi pack', 'loi pack', 'bat pack', 'geyser pack', 'prompt', 'enabled'],
+    'realping_system': ['ping', 'lag', 'ms', 'do tre', 'mang yeu', 'mat mang', 'disconect', 'scoreboard ping', 'tab ping', 'giat', 'dut mang', 'dung hinh'],
+    'skin_system': ['skin', 'doi skin', 'trang phuc', 'ngoai hinh', 'skinsrestorer', 'avatar', 'avatar discord', 'persona', 'marketplace'],
+    'game_modes_scope': ['oneblock', '1 block', 'skyblock', 'bedwars', 'skywars', 'prison', 'gens', 'boxpvp', 'the loai', 'che do choi', 'minigame'],
+    'mechanics_farms': ['ap trung', 'trung ga', 'may ap trung', 'spawner', 'chan nuoi', 'trong trot', 'hopper', 'farm ao'],
+    'than_khi_weapons': ['than khi', 'vu khi', 'excalibur', 'thanh kiem', 'kiem kaz', 'dai dao', 'do cua sun'],
+    'music_system': ['nhac', 'am nhac', 'lofi', 'bai hat', 'nghe nhac', 'tat nhac', 'sound', '17 bai'],
+    'patpat_system': ['patpat', 'xoa dau', 'cung chieu', 'hoat hinh', 'pat'],
+    'team_clan': ['team', 'bang hoi', 'clan', 'doi', 'nhom', 'tao team', 'moi team'],
+    'claim_griefprevention': ['claim', 'xeng vang', 'bao ve dat', 'khoa dat', 'trust', 'untrust', 'pha hoai', 'chong trom', 'dat cua tao'],
+    'newbie_protection': ['baove', 'tan thu', 'nguoi moi', 'bao ve 60p', 'chong pvp tan thu'],
+    'choden_auctionhouse': ['ah', 'choden', 'dau gia', 'cho den', 'ban do cho nguoi choi', 'mua do'],
+    'economy_shop': ['shop', 'cua hang', 'sellgui', 'ban do nhanh', 'kiem tien', 'kinh te', 'tien', 'money'],
+    'daily_rewards': ['daily', 'diem danh', 'qua ngay', 'phan thuong ngay', 'qua hang ngay'],
+    'taixiu_casino': ['tx', 'tai xiu', 'song bac', 'dat cuoc', 'xuc xac', 'co bac'],
+    'timber_veinminer': ['timber', 'chat cay nhanh', 'veinminer', 'dao quang nhanh', 'chat cay', 'dao quang'],
+    'actions_poses': ['sit', 'lay', 'crawl', 'cuoi dau', 'ngoi', 'nam', 'truon', 'spin', 'bellyflop', 'gsit'],
+    'one_player_sleep': ['ngu', 'qua dem', 'troi sang', 'one player sleep', 'sleep'],
+    'rtp_wild': ['rtp', 'dich chuyen ngau nhien', 'ra hoang da', 'tim dat moi', 'sinh ton'],
+    'redeem_giftcode': ['redeem', 'giftcode', 'ma qua', 'code', 'nhan code'],
+    'commands_summary': ['lenh', 'cac lenh', 'huong dan lenh', 'menu', 'spawn', 'sethome', 'home', 'tpa', 'tpaccept'],
+    'rules_conduct': ['luat', 'noi quy', 'ban', 'kick', 'lua dao', 'hack', 'cheat', 'chui tuc', 'xuc pham'],
+    'report_system': ['report', 'to cao', 'to cao hack', 'to cao pha hoai', 'bao cao'],
+}
+
 def strip_accents(s: str) -> str:
     """Loại bỏ dấu tiếng Việt chuẩn xác để hỗ trợ tìm kiếm không dấu."""
     if not s:
@@ -83,63 +110,73 @@ def strip_accents(s: str) -> str:
     s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
     return s.replace('đ', 'd').replace('Đ', 'D').lower()
 
-def search_knowledge(query: str, max_results: int = 4) -> str:
-    """Smart knowledge base search with accent stripping and priority scoring."""
+def search_knowledge(query: str, max_results: int = 5) -> str:
+    """Revolutionary Semantic & Intent-Driven Knowledge Base Search."""
     if not KNOWLEDGE_BASE or not query:
         return ""
     
     query_raw = query.lower().strip()
     query_no_acc = strip_accents(query_raw)
+    words_raw = set(re.findall(r'\w+', query_raw))
+    words_no_acc = set(re.findall(r'\w+', query_no_acc))
     if len(query_raw) < 2:
         return ""
     
     scored = []
     
     for topic in KNOWLEDGE_BASE:
-        score = 0
-        aliases = topic.get("aliases", [])
-        title = topic.get("title", "")
-        content = topic.get("content", "")
-        
-        # 1. Alias matching (cả có dấu lẫn không dấu)
-        for alias in aliases:
-            a_raw = str(alias).lower().strip()
-            a_no_acc = strip_accents(a_raw)
-            if a_raw in query_raw or a_no_acc in query_no_acc:
-                score += 3.5
-        
-        # 2. Title matching
+        tid = topic.get('id', '')
+        title = topic.get('title', '')
         title_raw = title.lower()
-        title_no_acc = strip_accents(title_raw)
-        for word in query_raw.split():
-            if len(word) > 2 and word in title_raw:
-                score += 1.2
-        for word in query_no_acc.split():
-            if len(word) > 2 and word in title_no_acc:
-                score += 1.0
-        
-        # 3. Content matching
-        for word in query_raw.split():
-            if len(word) > 3 and word in content.lower():
-                score += 0.5
-        for word in query_no_acc.split():
-            if len(word) > 3 and word in strip_accents(content):
-                score += 0.4
-        
-        if score >= 1.5:
+        title_no = strip_accents(title_raw)
+        aliases = topic.get('aliases', [])
+        content_raw = topic.get('content', '').lower()
+        content_no = strip_accents(content_raw)
+        score = 0.0
+
+        # 1. Intent Synonyms Match (Heavy Boost)
+        syns = INTENT_SYNONYMS.get(tid, [])
+        for s in syns:
+            s_raw = s.lower()
+            s_no = strip_accents(s_raw)
+            if s_raw in query_raw or s_no in query_no_acc:
+                score += 8.0 if len(s) > 3 else 5.5
+            elif s_raw in words_raw or s_no in words_no_acc:
+                score += 5.0
+
+        # 2. Aliases Match
+        for a in aliases:
+            a_raw = str(a).lower()
+            a_no = strip_accents(a_raw)
+            if a_raw in query_raw or a_no in query_no_acc:
+                score += 7.0
+            elif a_raw in words_raw or a_no in words_no_acc:
+                score += 4.5
+
+        # 3. Title Match
+        for w in words_no_acc:
+            if len(w) >= 2 and w in title_no:
+                score += 3.0
+
+        # 4. Content Match
+        for w in words_no_acc:
+            if len(w) >= 3 and w in content_no:
+                score += 0.8
+
+        if score > 2.0:
             scored.append((score, topic))
-    
+
     scored.sort(key=lambda x: x[0], reverse=True)
     top_topics = [t[1] for t in scored[:max_results]]
-    
+
     context_parts = []
     if top_topics:
         for topic in top_topics:
-            title = topic.get("title", "Unknown")
-            content = topic.get("content", "").strip()
-            context_parts.append(f"### {title}\n{content}")
+            title = topic.get('title', 'Unknown')
+            content = topic.get('content', '').strip()
+            context_parts.append(f"### {title}
+{content}")
     else:
-        # Tóm tắt cốt lõi mặc định khi không tìm thấy chủ đề chuyên biệt
         context_parts.append("""### Tóm Tắt Cốt Lõi KhangSMP:
 - IP: ripple.pikamc.vn | Cả Java và Bedrock/PE đều dùng Port: 25084
 - Phiên bản: Paper 1.21.4 (Hỗ trợ từ 1.16+ đến mới nhất)
@@ -148,8 +185,10 @@ def search_knowledge(query: str, max_results: int = 4) -> str:
 - Cơ chế farm: Chuẩn Minecraft Vanilla 1.21.4 (nuôi thú sinh sản tự nhiên). KHÔNG CÓ máy ấp trứng tự động hay farm ảo trong menu.
 - Lệnh tiêu biểu: /menu, /daily (nhận quà ngày), /tx (Tài Xỉu), /nhac (Studio 17 bài lofi), /patpat (Xoa đầu hoạt hình), /baove (bảo vệ tân thủ 60p), /timber (chặt cây nhanh), /team (bang hội), Claim đất bằng Xẻng Vàng.
 - NGUYÊN TẮC: Nếu người chơi hỏi về chế độ hoặc tính năng không được liệt kê ở đây, khẳng định ngay là máy chủ KHÔNG CÓ!""")
-    
-    return "\n\n".join(context_parts)
+
+    return "
+
+".join(context_parts)
 
 # ================= Permission Management =================
 # Yêu cầu Manage Guild hoặc Administrator cho tất cả lệnh
@@ -749,7 +788,7 @@ async def on_message(message: discord.Message):
             response = await ai_client.chat.completions.create(
                 model=XKIRO_MODEL,
                 temperature=0.3,
-                max_tokens=2500,
+                max_tokens=10000,
                 messages=(lambda _kb_ctx: [
                     {"role": "system", "content": f"""# Role: KhangSMP Official AI Assistant (v2.2 Strict Grounding Shield)
 
