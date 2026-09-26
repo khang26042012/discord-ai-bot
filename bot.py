@@ -55,8 +55,8 @@ _server_stats_lock = asyncio.Lock()
 _ws_connections: set = set()  # Active WebSocket connections from MC servers
 
 ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-xt-6851eddc8cd7b6765394f8da024867f63451b007cb54d2a2")
-ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://api.xkiro.com/v1")
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "qwen/qwen3.7-plus:free")
+ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://token.sensenova.ai/v1")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "sensenova-6.8-flash-lite")
 
 # Use ROUTER_* variables for the AI client
 XKIRO_API_KEY = ROUTER_API_KEY
