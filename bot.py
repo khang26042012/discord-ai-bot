@@ -172,10 +172,9 @@ def search_knowledge(query: str, max_results: int = 5) -> str:
     context_parts = []
     if top_topics:
         for topic in top_topics:
-            title = topic.get('title', 'Unknown')
-            content = topic.get('content', '').strip()
-            context_parts.append(f"### {title}
-{content}")
+            title = topic.get("title", "Unknown")
+            content = topic.get("content", "").strip()
+            context_parts.append(f"### {title}\n{content}")
     else:
         context_parts.append("""### Tóm Tắt Cốt Lõi KhangSMP:
 - IP: ripple.pikamc.vn | Cả Java và Bedrock/PE đều dùng Port: 25084
@@ -186,9 +185,7 @@ def search_knowledge(query: str, max_results: int = 5) -> str:
 - Lệnh tiêu biểu: /menu, /daily (nhận quà ngày), /tx (Tài Xỉu), /nhac (Studio 17 bài lofi), /patpat (Xoa đầu hoạt hình), /baove (bảo vệ tân thủ 60p), /timber (chặt cây nhanh), /team (bang hội), Claim đất bằng Xẻng Vàng.
 - NGUYÊN TẮC: Nếu người chơi hỏi về chế độ hoặc tính năng không được liệt kê ở đây, khẳng định ngay là máy chủ KHÔNG CÓ!""")
 
-    return "
-
-".join(context_parts)
+    return "\n\n".join(context_parts)
 
 # ================= Permission Management =================
 # Yêu cầu Manage Guild hoặc Administrator cho tất cả lệnh
