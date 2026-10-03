@@ -36,6 +36,22 @@ ADMIN_IDS = {
 }
 ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID", "1555918488386932797"))
 
+# DANH SACH DEN CAC LENH NGUY HIEM BI CHAN TU DISCORD
+DANGEROUS_EXACT = {
+    "stop", "restart", "reboot", "shutdown", "halt", "kill",
+    "reload", "reload confirm", "rl", "rl confirm",
+    "rm", "del", "delete", "format", "wipe",
+    "whitelist off", "authme unregister",
+    "plugman unload", "plugman disable",
+    "chunky cancel", "chunky purge"
+}
+DANGEROUS_PREFIXES = (
+    "stop", "restart", "reboot", "shutdown", "kill",
+    "reload", "rl ", "rm ", "del ", "delete ", "wipe ",
+    "mv delete", "world delete", "chunky purge", "chunky cancel",
+    "plugman unload", "plugman disable"
+)
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -45,6 +61,19 @@ staff_bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 def is_authorized(user_id: int) -> bool:
     return user_id in ADMIN_IDS
+
+def is_command_safe(cmd_str: str) -> tuple:
+    c = cmd_str.strip().lower()
+    if c.startswith("/"):
+        c = c[1:].strip()
+    if c in DANGEROUS_EXACT:
+        return False, "Lệnh dừng máy chủ hoặc thao tác tàn phá bị cấm!"
+    for pref in DANGEROUS_PREFIXES:
+        if c.startswith(pref):
+            return False, "Lệnh chứa tiền tố nguy hiểm (" + pref.strip() + ") bị cấm!"
+    if any(k in c for k in ["shutil", "os.system", "rmdir", "format", "drop table"]):
+        return False, "Lệnh chứa từ khóa hủy hoại hệ thống!"
+    return True, ""
 
 def send_nvnmc_cmd(cmd: str) -> bool:
     if not NVNMC_KEY:
@@ -120,9 +149,7 @@ def read_endlock_config() -> dict:
         return {}
 
 def get_online_mc_players() -> list:
-    """Chi lay danh sach nguoi choi DANG DANG NHAP TRUC TIEP TRONG SERVER MINECRAFT."""
     players = []
-    # 1. Thu bang Server List Ping (mcstatus)
     try:
         server = JavaServer.lookup(MC_SERVER_HOST + ":" + str(MC_SERVER_PORT))
         status = server.status()
@@ -137,7 +164,6 @@ def get_online_mc_players() -> list:
     except Exception as e:
         logger.warning("[StaffBot] mcstatus ping player sample error: " + str(e))
 
-    # 2. Neu online > 0 nhung sample rong (an boi proxy/paper), lay bang lenh /list qua console log
     if NVNMC_KEY:
         try:
             send_nvnmc_cmd("list")
@@ -187,6 +213,8 @@ def get_mc_status_data() -> dict:
             "version": "Unknown"
         }
 
+# ================= UI Views =================
+
 class GamemodeView(discord.ui.View):
     def __init__(self, author, online_players):
         super().__init__(timeout=120)
@@ -195,7 +223,6 @@ class GamemodeView(discord.ui.View):
         self.selected_mode = "survival"
         self.mode_label = "Sinh Tồn (Survival)"
 
-        # Dropdown 1: CHI CHUA NGUOI CHOI DANG ONLINE TRONG SERVER MINECRAFT
         opts = [
             discord.SelectOption(
                 label=p,
@@ -214,7 +241,6 @@ class GamemodeView(discord.ui.View):
         self.player_select.callback = self.player_select_callback
         self.add_item(self.player_select)
 
-        # Dropdown 2: Che do choi
         mode_opts = [
             discord.SelectOption(label="Sinh Tồn (Survival)", value="survival", description="Chế độ sinh tồn mặc định", emoji="⚔️", default=True),
             discord.SelectOption(label="Sáng Tạo (Creative)", value="creative", description="Bay lượn và lấy vật phẩm vô hạn", emoji="🎨"),
@@ -357,6 +383,8 @@ class SvStatusView(discord.ui.View):
         embed = make_sv_status_embed(res, mc, interaction.user)
         await interaction.edit_original_response(embed=embed, view=self)
 
+# ================= Embed Builders =================
+
 def make_endlock_embed(is_locked: bool, reason: str, user) -> discord.Embed:
     status_text = "🔒 ĐANG BỊ KHÓA CHẶT" if is_locked else "🔓 ĐÃ MỞ CỬA TỰ DO"
     color = 0xe74c3c if is_locked else 0x2ecc71
@@ -414,6 +442,8 @@ async def on_ready():
     except Exception as e:
         logger.error("[StaffBot] Error syncing slash commands: " + str(e))
     await staff_bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="KhangSMP Admin Core 🛡️"))
+
+# ================= SLASH COMMANDS =================
 
 @staff_bot.tree.command(name="ping", description="🏓 Kiểm tra độ trễ phản hồi của bot")
 async def slash_ping(interaction: discord.Interaction):
@@ -518,25 +548,224 @@ async def slash_endlock(interaction: discord.Interaction):
     view = EndLockView(interaction.user)
     await interaction.followup.send(embed=embed, view=view)
 
+@staff_bot.tree.command(name="weather", description="☀️ Thay đổi thời tiết in-game")
+@app_commands.describe(mode="Kiểu thời tiết")
+@app_commands.choices(mode=[
+    app_commands.Choice(name="☀️ Nắng trong xanh (Clear)", value="clear"),
+    app_commands.Choice(name="🌧️ Mưa mát mẻ (Rain)", value="rain"),
+    app_commands.Choice(name="⛈️ Giông bão sấm sét (Thunder)", value="thunder")
+])
+async def slash_weather(interaction: discord.Interaction, mode: app_commands.Choice[str]):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    cmd = "weather " + mode.value
+    ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+    if ok:
+        embed = discord.Embed(
+            title="☀️ ĐÃ THAY ĐỔI THỜI TIẾT",
+            description="Thời tiết in-game đã được đổi sang: **" + mode.name + "**\nLệnh: `" + cmd + "`",
+            color=0x3498db,
+            timestamp=datetime.datetime.now()
+        )
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể gửi lệnh `" + cmd + "`!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP World Control", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+@staff_bot.tree.command(name="time", description="☀️ Chỉnh thời gian (Ngày / Đêm)")
+@app_commands.describe(time_choice="Chọn thời điểm")
+@app_commands.choices(time_choice=[
+    app_commands.Choice(name="☀️ Ban ngày (Day - 1000)", value="day"),
+    app_commands.Choice(name="🌙 Ban đêm (Night - 13000)", value="night")
+])
+async def slash_time(interaction: discord.Interaction, time_choice: app_commands.Choice[str]):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    cmd = "time set " + time_choice.value
+    ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+    if ok:
+        embed = discord.Embed(
+            title="⏱️ ĐÃ ĐỔI THỜI GIAN THẾ GIỚI",
+            description="Đã chỉnh thời gian sang **" + time_choice.name + "**\nLệnh: `" + cmd + "`",
+            color=0xf1c40f,
+            timestamp=datetime.datetime.now()
+        )
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể gửi lệnh `" + cmd + "`!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP World Control", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+@staff_bot.tree.command(name="say", description="📢 Phát thông báo nổi bật tới toàn bộ người chơi in-game")
+@app_commands.describe(message="Nội dung thông báo")
+async def slash_say(interaction: discord.Interaction, message: str):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    cmd = "say §6§l[ADMIN " + interaction.user.name + "] §f" + message
+    ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+    if ok:
+        embed = discord.Embed(
+            title="📢 ĐÃ PHÁT THÔNG BÁO TOÀN SERVER",
+            description="───────────────────────────\n💬 **Nội dung:** " + message + "\n👑 **Người phát:** " + interaction.user.mention + "\n───────────────────────────",
+            color=0xf39c12,
+            timestamp=datetime.datetime.now()
+        )
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể gửi thông báo tới máy chủ!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP Broadcast", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+@staff_bot.tree.command(name="kick", description="👢 Đá văng một người chơi ra khỏi server Minecraft")
+@app_commands.describe(player="Tên người chơi in-game", reason="Lý do kick")
+async def slash_kick(interaction: discord.Interaction, player: str, reason: str = "Bị kick bởi Quản trị viên"):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    cmd = "kick " + player + " " + reason + " (bởi " + interaction.user.name + ")"
+    ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+    if ok:
+        embed = discord.Embed(
+            title="👢 ĐÃ KICK NGƯỜI CHƠI RA KHỎI SERVER",
+            description=(
+                "───────────────────────────\n" +
+                "👤 **Người chơi:** `" + player + "`\n" +
+                "📋 **Lý do:** `" + reason + "`\n" +
+                "👑 **Thực hiện:** " + interaction.user.mention + "\n" +
+                "───────────────────────────"
+            ),
+            color=0xe67e22,
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_thumbnail(url="https://mc-heads.net/avatar/" + player + "/100.png")
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể thực thi lệnh kick `" + player + "`!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP Moderation", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+@staff_bot.tree.command(name="ban", description="🔨 Cấm vĩnh viễn người chơi vào server Minecraft")
+@app_commands.describe(player="Tên người chơi in-game", reason="Lý do cấm")
+async def slash_ban(interaction: discord.Interaction, player: str, reason: str = "Vi phạm quy định server"):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    cmd = "ban " + player + " " + reason + " (bởi " + interaction.user.name + ")"
+    ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+    if ok:
+        embed = discord.Embed(
+            title="🔨 ĐÃ BAN NGƯỜI CHƠI VĨNH VIỄN",
+            description=(
+                "───────────────────────────\n" +
+                "👤 **Người chơi:** `" + player + "`\n" +
+                "📋 **Lý do:** `" + reason + "`\n" +
+                "👑 **Thực hiện:** " + interaction.user.mention + "\n" +
+                "───────────────────────────"
+            ),
+            color=0xc0392b,
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_thumbnail(url="https://mc-heads.net/avatar/" + player + "/100.png")
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể thực thi lệnh ban `" + player + "`!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP Ban Hammer", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+@staff_bot.tree.command(name="unban", description="🔓 Gỡ lệnh cấm (Unban) cho người chơi")
+@app_commands.describe(player="Tên người chơi in-game")
+async def slash_unban(interaction: discord.Interaction, player: str):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    cmd = "pardon " + player
+    ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+    if ok:
+        embed = discord.Embed(
+            title="🔓 ĐÃ GỠ LỆNH CẤM (UNBAN)",
+            description="Đã gỡ cấm thành công cho người chơi **`" + player + "`**! Người này đã có thể vào lại server.",
+            color=0x2ecc71,
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_thumbnail(url="https://mc-heads.net/avatar/" + player + "/100.png")
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể gửi lệnh unban cho `" + player + "`!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP Pardon", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+@staff_bot.tree.command(name="cmd", description="💻 Bắn lệnh console an toàn vào server Minecraft")
+@app_commands.describe(command="Lệnh console muốn thực thi")
+async def slash_cmd(interaction: discord.Interaction, command: str):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+
+    # KIỂM TRA LÁ CHẮN BẢO MẬT AN TOÀN
+    safe, reason = is_command_safe(command)
+    if not safe:
+        embed = discord.Embed(
+            title="🛡️ LÁ CHẮN BẢO VỆ: LỆNH BỊ TỪ CHỐI",
+            description=(
+                "───────────────────────────\n" +
+                "❌ **Cảnh báo an toàn:** " + reason + "\n" +
+                "⚠️ **Lệnh đã nhập:** `" + command + "`\n" +
+                "📌 **Quy tắc:** Các lệnh dừng server (`stop`), khởi động lại (`restart`), xóa file/thế giới (`rm`, `mv delete`) và gỡ plugin nóng đều bị khóa chặt trên Discord để bảo đảm an toàn dữ liệu 100%!\n" +
+                "───────────────────────────"
+            ),
+            color=0xe74c3c,
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_footer(text="KhangSMP Security Shield", icon_url=interaction.user.display_avatar.url)
+        await interaction.followup.send(embed=embed)
+        return
+
+    # Nếu an toàn, thực thi
+    ok = await asyncio.to_thread(send_nvnmc_cmd, command)
+    if ok:
+        embed = discord.Embed(
+            title="💻 LỆNH CONSOLE ĐÃ ĐƯỢC GỬI",
+            description=(
+                "───────────────────────────\n" +
+                "✅ **Lệnh thực thi:** `" + command + "`\n" +
+                "👑 **Thực hiện bởi:** " + interaction.user.mention + "\n" +
+                "📡 **Trạng thái:** Bắn thành công vào máy chủ NVNMC!\n" +
+                "───────────────────────────"
+            ),
+            color=0x2ecc71,
+            timestamp=datetime.datetime.now()
+        )
+    else:
+        embed = discord.Embed(title="❌ THẤT BẠI", description="Không thể gửi lệnh `" + command + "` tới console máy chủ!", color=0xe74c3c)
+    embed.set_footer(text="KhangSMP Console Executor", icon_url=interaction.user.display_avatar.url)
+    await interaction.followup.send(embed=embed)
+
+# ================= PREFIX & SHORTCUT COMMANDS =================
+
 @staff_bot.event
 async def on_message(message: discord.Message):
     if message.author.bot or message.author == staff_bot.user:
         return
     if not is_authorized(message.author.id):
         return
-    content = message.content.strip().lower()
 
+    content = message.content.strip().lower()
+    raw_content = message.content.strip()
+
+    # 1. ping
     if content in ("ping", "!ping"):
         async with message.channel.typing():
             latency = round(staff_bot.latency * 1000)
-            embed = discord.Embed(
-                title="🏓 PONG!",
-                description="Độ trễ bot: **`" + str(latency) + "ms`**",
-                color=0x2ecc71
-            )
+            embed = discord.Embed(title="🏓 PONG!", description="Độ trễ bot: **`" + str(latency) + "ms`**", color=0x2ecc71)
             await message.reply(embed=embed)
         return
 
+    # 2. sv status
     if content in ("sv status", "!sv status", "!status"):
         async with message.channel.typing():
             res = await asyncio.to_thread(get_nvnmc_resources)
@@ -546,19 +775,18 @@ async def on_message(message: discord.Message):
             await message.reply(embed=embed, view=view)
         return
 
+    # 3. list player
     if content in ("list player", "!list player", "list", "!list", "!players"):
         async with message.channel.typing():
             mc = await asyncio.to_thread(get_mc_status_data)
             online = mc.get("players_online", 0)
             pl = mc.get("player_list", [])
-            embed = discord.Embed(
-                title="👥 NGƯỜI CHƠI TRỰC TUYẾN (" + str(online) + "/" + str(mc.get("players_max", 50)) + ")",
-                color=0x3498db
-            )
+            embed = discord.Embed(title="👥 NGƯỜI CHƠI TRỰC TUYẾN (" + str(online) + "/" + str(mc.get("players_max", 50)) + ")", color=0x3498db)
             embed.description = "\n".join(["• `" + p + "`" for p in pl]) if pl else "*Hiện tại không có ai online.*"
             await message.reply(embed=embed)
         return
 
+    # 4. gamemode
     if content in ("gamemode", "!gamemode", "gm", "!gm"):
         async with message.channel.typing():
             online_players = await asyncio.to_thread(get_online_mc_players)
@@ -569,9 +797,7 @@ async def on_message(message: discord.Message):
                         "───────────────────────────\n" +
                         "Hiện tại **không có ai đang ở trong server Minecraft** để hiển thị danh sách lựa chọn!\n\n" +
                         "• Người chơi cần phải đăng nhập vào game trước.\n" +
-                        "• Hoặc nếu anh muốn gõ đổi chế độ ngay lập tức, dùng lệnh nhanh:\n" +
-                        "  👉 `gm <mode> <tên_player>`\n" +
-                        "  *(Ví dụ: `gm creative PE_KhangKYT` hoặc `gm survival phb.duong`)*\n" +
+                        "• Hoặc dùng cú pháp nhanh: `gm <mode> <tên_player>`\n" +
                         "───────────────────────────"
                     ),
                     color=0xe67e22,
@@ -580,15 +806,12 @@ async def on_message(message: discord.Message):
                 embed.set_footer(text="KhangSMP Admin Core", icon_url=message.author.display_avatar.url)
                 await message.reply(embed=embed)
                 return
-
             embed = discord.Embed(
                 title="🎮 BẢNG ĐIỀU KHIỂN CHẾ ĐỘ CHƠI (GAMEMODE)",
                 description=(
                     "───────────────────────────\n" +
                     "Đã quét thấy **" + str(len(online_players)) + "** người chơi đang online trong game:\n" +
-                    "• **Bước 1:** Chọn người chơi đang online ở Menu 1.\n" +
-                    "• **Bước 2:** Chọn chế độ chơi (Survival, Creative, Spectator, Adventure).\n" +
-                    "• **Bước 3:** Nhấn nút **⚡ Áp Dụng Ngay**!\n" +
+                    "• Chọn người chơi ở Menu 1 và chọn chế độ ở Menu 2 rồi bấm **⚡ Áp Dụng Ngay**!\n" +
                     "───────────────────────────"
                 ),
                 color=0x9b59b6,
@@ -599,25 +822,23 @@ async def on_message(message: discord.Message):
             await message.reply(embed=embed, view=view)
         return
 
+    # 4b. gamemode nhanh: gm <mode> <player>
     if content.startswith("gamemode ") or content.startswith("!gamemode ") or content.startswith("gm ") or content.startswith("!gm "):
-        p = message.content.strip().split()
+        p = raw_content.split()
         if len(p) >= 3:
             async with message.channel.typing():
                 mode, pl = p[1], p[2]
                 cmd = "gamemode " + mode + " " + pl
                 ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
                 if ok:
-                    embed = discord.Embed(
-                        title="✨ ĐỔI CHẾ ĐỘ THÀNH CÔNG",
-                        description="Đã chuyển chế độ của **`" + pl + "`** sang **`" + mode + "`**!\nLệnh console: `" + cmd + "`",
-                        color=0x2ecc71
-                    )
+                    embed = discord.Embed(title="✨ ĐỔI CHẾ ĐỘ THÀNH CÔNG", description="Đã chuyển chế độ của **`" + pl + "`** sang **`" + mode + "`**!\nLệnh: `" + cmd + "`", color=0x2ecc71)
                     embed.set_thumbnail(url="https://mc-heads.net/avatar/" + pl + "/100.png")
                     await message.reply(embed=embed)
                 else:
                     await message.reply("❌ Không thể thực thi lệnh `" + cmd + "`!")
         return
 
+    # 5. endlock
     if content in ("endlock", "!endlock", "end", "!end"):
         async with message.channel.typing():
             cfg = await asyncio.to_thread(read_endlock_config)
@@ -629,10 +850,10 @@ async def on_message(message: discord.Message):
         return
 
     if content.startswith("endlock ") or content.startswith("!endlock ") or content.startswith("end ") or content.startswith("!end "):
-        p = message.content.strip().split()
+        p = raw_content.split()
         if len(p) >= 2:
             async with message.channel.typing():
-                act = p[1]
+                act = p[1].lower()
                 if act in ("lock", "unlock"):
                     cmd = "endlock " + act
                     ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
@@ -649,6 +870,130 @@ async def on_message(message: discord.Message):
                     embed = make_endlock_embed(cfg.get("locked", True), cfg.get("reason", "Bảo trì"), message.author)
                     view = EndLockView(message.author)
                     await message.reply(embed=embed, view=view)
+        return
+
+    # 6. thoi tiet: sun, rain, thunder, clear
+    if content in ("sun", "!sun", "clear", "!clear", "weather clear"):
+        async with message.channel.typing():
+            await asyncio.to_thread(send_nvnmc_cmd, "weather clear")
+            await message.reply("☀️ **Đã đổi thời tiết sang Nắng Trong Xanh!** (`weather clear`)")
+        return
+
+    if content in ("rain", "!rain", "weather rain"):
+        async with message.channel.typing():
+            await asyncio.to_thread(send_nvnmc_cmd, "weather rain")
+            await message.reply("🌧️ **Đã đổi thời tiết sang Trời Mưa!** (`weather rain`)")
+        return
+
+    if content in ("thunder", "!thunder", "weather thunder"):
+        async with message.channel.typing():
+            await asyncio.to_thread(send_nvnmc_cmd, "weather thunder")
+            await message.reply("⛈️ **Đã đổi thời tiết sang Giông Bão Sấm Sét!** (`weather thunder`)")
+        return
+
+    # 7. thoi gian: day (day/đây), night
+    if content in ("day", "!day", "đây", "!đây", "time day", "!time day"):
+        async with message.channel.typing():
+            await asyncio.to_thread(send_nvnmc_cmd, "time set day")
+            await message.reply("☀️ **Đã đổi thời gian sang Ban Ngày!** (`time set day`)")
+        return
+
+    if content in ("night", "!night", "time night", "!time night"):
+        async with message.channel.typing():
+            await asyncio.to_thread(send_nvnmc_cmd, "time set night")
+            await message.reply("🌙 **Đã đổi thời gian sang Ban Đêm!** (`time set night`)")
+        return
+
+    # 8. say / bc: say <nội dung>
+    if content.startswith("say ") or content.startswith("!say ") or content.startswith("bc ") or content.startswith("!bc "):
+        parts = raw_content.split(maxsplit=1)
+        if len(parts) >= 2:
+            msg_text = parts[1]
+            async with message.channel.typing():
+                cmd = "say §6§l[ADMIN " + message.author.name + "] §f" + msg_text
+                ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+                if ok:
+                    await message.reply("📢 **Đã phát thông báo vào in-game:**\n`" + msg_text + "`")
+                else:
+                    await message.reply("❌ Gửi thông báo in-game thất bại!")
+        return
+
+    # 9. kick: kick <player> [reason]
+    if content.startswith("kick ") or content.startswith("!kick "):
+        parts = raw_content.split(maxsplit=2)
+        if len(parts) >= 2:
+            pl = parts[1]
+            reason = parts[2] if len(parts) >= 3 else "Bị kick bởi Quản trị viên"
+            async with message.channel.typing():
+                cmd = "kick " + pl + " " + reason + " (bởi " + message.author.name + ")"
+                ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+                if ok:
+                    embed = discord.Embed(
+                        title="👢 ĐÃ KICK NGƯỜI CHƠI",
+                        description="Đã kick **`" + pl + "`** ra khỏi máy chủ!\nLý do: `" + reason + "`",
+                        color=0xe67e22
+                    )
+                    embed.set_thumbnail(url="https://mc-heads.net/avatar/" + pl + "/100.png")
+                    await message.reply(embed=embed)
+                else:
+                    await message.reply("❌ Không thể thực thi lệnh kick!")
+        return
+
+    # 10. ban: ban <player> [reason]
+    if content.startswith("ban ") or content.startswith("!ban "):
+        parts = raw_content.split(maxsplit=2)
+        if len(parts) >= 2:
+            pl = parts[1]
+            reason = parts[2] if len(parts) >= 3 else "Vi phạm quy định server"
+            async with message.channel.typing():
+                cmd = "ban " + pl + " " + reason + " (bởi " + message.author.name + ")"
+                ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+                if ok:
+                    embed = discord.Embed(
+                        title="🔨 ĐÃ BAN NGƯỜI CHƠI VĨNH VIỄN",
+                        description="Đã cấm vĩnh viễn **`" + pl + "`** khỏi máy chủ!\nLý do: `" + reason + "`",
+                        color=0xc0392b
+                    )
+                    embed.set_thumbnail(url="https://mc-heads.net/avatar/" + pl + "/100.png")
+                    await message.reply(embed=embed)
+                else:
+                    await message.reply("❌ Không thể thực thi lệnh ban!")
+        return
+
+    # 10b. unban: unban <player>
+    if content.startswith("unban ") or content.startswith("!unban "):
+        parts = raw_content.split(maxsplit=1)
+        if len(parts) >= 2:
+            pl = parts[1]
+            async with message.channel.typing():
+                cmd = "pardon " + pl
+                ok = await asyncio.to_thread(send_nvnmc_cmd, cmd)
+                if ok:
+                    await message.reply("🔓 **Đã gỡ cấm (unban) cho `" + pl + "` thành công!**")
+                else:
+                    await message.reply("❌ Gửi lệnh unban thất bại!")
+        return
+
+    # 11. cmd: cmd <lệnh> (KÈM LÁ CHẮN BẢO MẬT AN TOÀN)
+    if content.startswith("cmd ") or content.startswith("!cmd "):
+        parts = raw_content.split(maxsplit=1)
+        if len(parts) >= 2:
+            cmd_to_run = parts[1]
+            async with message.channel.typing():
+                safe, reason = is_command_safe(cmd_to_run)
+                if not safe:
+                    embed = discord.Embed(
+                        title="🛡️ LÁ CHẮN BẢO VỆ: LỆNH BỊ TỪ CHỐI",
+                        description="❌ " + reason + "\n⚠️ Lệnh: `" + cmd_to_run + "`\n📌 Các lệnh dừng server, xóa file hay tàn phá dữ liệu đều bị khóa chặt trên Discord!",
+                        color=0xe74c3c
+                    )
+                    await message.reply(embed=embed)
+                    return
+                ok = await asyncio.to_thread(send_nvnmc_cmd, cmd_to_run)
+                if ok:
+                    await message.reply("💻 **Đã gửi lệnh console an toàn:** `" + cmd_to_run + "`")
+                else:
+                    await message.reply("❌ Gửi lệnh console thất bại!")
         return
 
     await staff_bot.process_commands(message)
