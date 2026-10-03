@@ -385,6 +385,83 @@ class SvStatusView(discord.ui.View):
 
 # ================= Embed Builders =================
 
+def make_help_embed(user) -> discord.Embed:
+    embed = discord.Embed(
+        title="📖 CẨM NANG HƯỚNG DẪN QUẢN TRỊ MÁY CHỦ KHANGSMP",
+        description=(
+            "───────────────────────────\n" +
+            "Xin chào **Ban Quản Trị KhangSMP**! Dưới đây là toàn bộ hướng dẫn sử dụng bot **Sún staff** để điều hành máy chủ Minecraft mượt mà ngay trên điện thoại hoặc Discord:\n" +
+            "───────────────────────────"
+        ),
+        color=0x3498db,
+        timestamp=datetime.datetime.now()
+    )
+    embed.add_field(
+        name="📊 1. GIÁM SÁT MÁY CHỦ",
+        value=(
+            "• `/sv_status` hoặc `sv status`: Xem CPU, RAM, ổ đĩa, Uptime và số người chơi (có nút làm mới).\n" +
+            "• `/list_players` hoặc `list`: Xem danh sách nick đang online trong game.\n" +
+            "• `/ping` hoặc `ping`: Kiểm tra độ trễ mạng của bot."
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name="🎮 2. ĐỔI CHẾ ĐỘ CHƠI (GAMEMODE)",
+        value=(
+            "• `/gamemode` hoặc `gm`: Mở menu 2 dropdown trực quan (chọn người chơi online ➔ chọn chế độ ➔ bấm **⚡ Áp Dụng Ngay**).\n" +
+            "• Lệnh nhanh: `gm <mode> <tên>`\n" +
+            "  *(Ví dụ: `gm creative PE_KhangKYT` hoặc `gm survival phb.duong`)*"
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name="🌌 3. ĐIỀU KHIỂN CỔNG THE END (ENDLOCK)",
+        value=(
+            "• `/endlock` hoặc `endlock`: Bảng điều khiển cổng The End kèm nút bấm Khóa / Mở trực tiếp.\n" +
+            "• Lệnh nhanh: `endlock lock` (khóa cổng) hoặc `endlock unlock` (mở cổng)."
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name="☀️ 4. THỜI TIẾT & THỜI GIAN",
+        value=(
+            "• Ban ngày: `day` hoặc `đây` (hoặc `/time`)\n" +
+            "• Ban đêm: `night` (hoặc `/time`)\n" +
+            "• Nắng đẹp: `sun` hoặc `clear` (hoặc `/weather`)\n" +
+            "• Trời mưa: `rain` | Giông sét: `thunder`"
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name="🚨 5. XỬ LÝ VI PHẠM & PHẠT (MODERATION)",
+        value=(
+            "• Đá người chơi: `kick <tên> [lý do]` (hoặc `/kick`)\n" +
+            "• Cấm vĩnh viễn: `ban <tên> [lý do]` (hoặc `/ban`)\n" +
+            "• Gỡ cấm: `unban <tên>` (hoặc `/unban`)\n" +
+            "*(Tất cả lệnh phạt đều tự động hiển thị skin đầu 3D của người vi phạm)*"
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name="📢 6. PHÁT THÔNG BÁO TOÀN SERVER (SAY / BC)",
+        value=(
+            "• Cú pháp: `say <nội dung>` hoặc `bc <nội dung>` (hoặc `/say`)\n" +
+            "• Thông báo sẽ hiện chữ vàng cam nổi bật giữa game cho tất cả người chơi đọc được!"
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name="💻 7. LỆNH CONSOLE (`cmd`) & LÁ CHẮN BẢO VỆ",
+        value=(
+            "• Cú pháp: `cmd <lệnh>` (hoặc `/cmd`)\n" +
+            "  *(Ví dụ: `cmd sk reload all`, `cmd clearitemkhang clean`)*\n" +
+            "• 🛡️ **Lá chắn bảo mật:** Các lệnh nguy hiểm (`stop`, `restart`, `rm`, `delete`, `reload`,...) bị khóa chặt trên Discord để chống phá hoại hoặc mất dữ liệu."
+        ),
+        inline=False
+    )
+    embed.set_footer(text="Dành riêng cho BQT KhangSMP • Yêu cầu bởi " + user.name, icon_url=user.display_avatar.url)
+    return embed
+
 def make_endlock_embed(is_locked: bool, reason: str, user) -> discord.Embed:
     status_text = "🔒 ĐANG BỊ KHÓA CHẶT" if is_locked else "🔓 ĐÃ MỞ CỬA TỰ DO"
     color = 0xe74c3c if is_locked else 0x2ecc71
@@ -444,6 +521,15 @@ async def on_ready():
     await staff_bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="KhangSMP Admin Core 🛡️"))
 
 # ================= SLASH COMMANDS =================
+
+@staff_bot.tree.command(name="help", description="📖 Hướng dẫn chi tiết sử dụng bot quản lý server KhangSMP")
+async def slash_help(interaction: discord.Interaction):
+    if not is_authorized(interaction.user.id):
+        await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
+        return
+    await interaction.response.defer(thinking=True)
+    embed = make_help_embed(interaction.user)
+    await interaction.followup.send(embed=embed)
 
 @staff_bot.tree.command(name="ping", description="🏓 Kiểm tra độ trễ phản hồi của bot")
 async def slash_ping(interaction: discord.Interaction):
@@ -706,7 +792,6 @@ async def slash_cmd(interaction: discord.Interaction, command: str):
         return
     await interaction.response.defer(thinking=True)
 
-    # KIỂM TRA LÁ CHẮN BẢO MẬT AN TOÀN
     safe, reason = is_command_safe(command)
     if not safe:
         embed = discord.Embed(
@@ -725,7 +810,6 @@ async def slash_cmd(interaction: discord.Interaction, command: str):
         await interaction.followup.send(embed=embed)
         return
 
-    # Nếu an toàn, thực thi
     ok = await asyncio.to_thread(send_nvnmc_cmd, command)
     if ok:
         embed = discord.Embed(
@@ -756,6 +840,13 @@ async def on_message(message: discord.Message):
 
     content = message.content.strip().lower()
     raw_content = message.content.strip()
+
+    # 0. help / huong dan
+    if content in ("help", "!help", "hdsd", "!hdsd", "huongdan", "!huongdan", "lenh", "!lenh"):
+        async with message.channel.typing():
+            embed = make_help_embed(message.author)
+            await message.reply(embed=embed)
+        return
 
     # 1. ping
     if content in ("ping", "!ping"):
