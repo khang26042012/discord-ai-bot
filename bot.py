@@ -780,6 +780,11 @@ async def on_message(message: discord.Message):
 
     # Call Xkiro AI API for any text message in the allowed channel
     async with message.channel.typing():
+        # Cấu hình phản hồi cố định theo chỉ đạo của Khang (Server tạm thời offline)
+        offline_response = "hiện tại, server đang cần tạm thời offline, xin lỗi bạn - câu trả lời được lập trình bởi Khang"
+        await message.reply(offline_response)
+        return
+
         try:
             response = await ai_client.chat.completions.create(
                 model=XKIRO_MODEL,
