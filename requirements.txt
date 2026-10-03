@@ -5,3 +5,4 @@ openai>=1.0.0
 cachetools>=5.0.0
 groq>=0.9.0
 PyYAML>=6.0
+mcstatus>=14.0.0

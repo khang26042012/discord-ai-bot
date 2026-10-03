@@ -2325,5 +2325,25 @@ async def reload_cmd(interaction: discord.Interaction):
         sys.exit(0)
 
 
+async def main():
+    staff_token = os.getenv("STAFF_BOT_TOKEN")
+    if not staff_token:
+        staff_token_path = os.path.expanduser("~/.credentials/discord_staff_bot.token")
+        if os.path.exists(staff_token_path):
+            with open(staff_token_path, "r", encoding="utf-8") as f:
+                staff_token = f.read().strip()
+
+    tasks = [bot.start(TOKEN)]
+    if staff_token:
+        try:
+            from staff_bot import staff_bot
+            logger.info("[MAIN] Khoi chay Staff Bot song song thanh cong!")
+            tasks.append(staff_bot.start(staff_token))
+        except Exception as e:
+            logger.error(f"[MAIN] Khoi dong Staff Bot that bai: {e}")
+
+    await asyncio.gather(*tasks)
+
+
 if __name__ == "__main__":
-    bot.run(TOKEN)
+    asyncio.run(main())
