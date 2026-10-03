@@ -2,6 +2,8 @@
 import os
 import sys
 import json
+import re
+import time
 import logging
 import asyncio
 import datetime
@@ -117,36 +119,47 @@ def read_endlock_config() -> dict:
         logger.error("[StaffBot] Read EndLock config failed: " + str(e))
         return {}
 
-def get_known_players() -> list:
+def get_online_mc_players() -> list:
+    """Chi lay danh sach nguoi choi DANG DANG NHAP TRUC TIEP TRONG SERVER MINECRAFT."""
     players = []
+    # 1. Thu bang Server List Ping (mcstatus)
     try:
         server = JavaServer.lookup(MC_SERVER_HOST + ":" + str(MC_SERVER_PORT))
         status = server.status()
+        if status.players.online == 0:
+            return []
         if status.players.sample:
             for p in status.players.sample:
                 if p.name and p.name not in players:
                     players.append(p.name)
-    except Exception:
-        pass
+            if players:
+                return players
+    except Exception as e:
+        logger.warning("[StaffBot] mcstatus ping player sample error: " + str(e))
 
+    # 2. Neu online > 0 nhung sample rong (an boi proxy/paper), lay bang lenh /list qua console log
     if NVNMC_KEY:
         try:
-            url = NVNMC_BASE_URL + "/files/contents?file=%2Fusercache.json"
+            send_nvnmc_cmd("list")
+            time.sleep(0.4)
+            url = NVNMC_BASE_URL + "/files/contents?file=%2Flogs%2Flatest.log"
             headers = {"Authorization": "Bearer " + NVNMC_KEY, "User-Agent": "NVNMC-Bot/1.0"}
             req = urllib.request.Request(url, headers=headers)
-            resp = urllib.request.urlopen(req, timeout=5)
-            data = json.loads(resp.read().decode())
-            for item in data:
-                n = item.get("name")
-                if n and n not in players:
-                    players.append(n)
-        except Exception:
-            pass
-
-    core_staff = ["PE_KhangKYT", "phantrongkhangg", "phb.duong", "Chip_iu", "Khangplay"]
-    for c in core_staff:
-        if c not in players:
-            players.append(c)
+            content = urllib.request.urlopen(req, timeout=5).read().decode(errors="ignore")
+            for line in reversed(content.splitlines()[-25:]):
+                m = re.search(r"There are (\d+) of a max of (\d+) players online:(.*)", line)
+                if m:
+                    count = int(m.group(1))
+                    names_str = m.group(3).strip()
+                    if count == 0 or not names_str:
+                        return []
+                    for n in names_str.split(","):
+                        n_clean = n.strip()
+                        if n_clean and n_clean not in players:
+                            players.append(n_clean)
+                    return players
+        except Exception as e:
+            logger.error("[StaffBot] Fallback /list log parse error: " + str(e))
 
     return players
 
@@ -175,23 +188,24 @@ def get_mc_status_data() -> dict:
         }
 
 class GamemodeView(discord.ui.View):
-    def __init__(self, author, player_options):
+    def __init__(self, author, online_players):
         super().__init__(timeout=120)
         self.author = author
-        self.selected_player = player_options[0] if player_options else "PE_KhangKYT"
+        self.selected_player = online_players[0]
         self.selected_mode = "survival"
         self.mode_label = "Sinh Tồn (Survival)"
 
+        # Dropdown 1: CHI CHUA NGUOI CHOI DANG ONLINE TRONG SERVER MINECRAFT
         opts = [
             discord.SelectOption(
                 label=p,
-                description="Thành viên: " + p,
-                emoji="👤",
+                description="Đang online trong server: " + p,
+                emoji="🟢",
                 default=(i == 0)
-            ) for i, p in enumerate(player_options[:25])
+            ) for i, p in enumerate(online_players[:25])
         ]
         self.player_select = discord.ui.Select(
-            placeholder="🎮 Bước 1: Chọn người chơi...",
+            placeholder="🟢 Bước 1: Chọn người chơi đang online...",
             min_values=1,
             max_values=1,
             options=opts,
@@ -200,6 +214,7 @@ class GamemodeView(discord.ui.View):
         self.player_select.callback = self.player_select_callback
         self.add_item(self.player_select)
 
+        # Dropdown 2: Che do choi
         mode_opts = [
             discord.SelectOption(label="Sinh Tồn (Survival)", value="survival", description="Chế độ sinh tồn mặc định", emoji="⚔️", default=True),
             discord.SelectOption(label="Sáng Tạo (Creative)", value="creative", description="Bay lượn và lấy vật phẩm vô hạn", emoji="🎨"),
@@ -252,7 +267,7 @@ class GamemodeView(discord.ui.View):
                 title="✨ ĐỔI CHẾ ĐỘ CHƠI THÀNH CÔNG",
                 description=(
                     "───────────────────────────\n" +
-                    "👤 **Người chơi:** `" + self.selected_player + "`\n" +
+                    "👤 **Người chơi:** `" + self.selected_player + "` (Online)\n" +
                     "🎮 **Chế độ mới:** **" + self.mode_label + "**\n" +
                     "💻 **Lệnh console:** `" + cmd + "`\n" +
                     "👑 **Thực hiện bởi:** " + interaction.user.mention + "\n" +
@@ -447,28 +462,47 @@ async def slash_list_players(interaction: discord.Interaction):
     embed.set_footer(text="KhangSMP Core", icon_url=interaction.user.display_avatar.url)
     await interaction.followup.send(embed=embed)
 
-@staff_bot.tree.command(name="gamemode", description="🎮 Menu chọn người chơi và chế độ chơi (Gamemode)")
+@staff_bot.tree.command(name="gamemode", description="🎮 Menu chọn người chơi đang online và đổi chế độ chơi")
 async def slash_gamemode(interaction: discord.Interaction):
     if not is_authorized(interaction.user.id):
         await interaction.response.send_message("❌ Bạn không có quyền quản trị!", ephemeral=True)
         return
     await interaction.response.defer(thinking=True)
-    player_options = await asyncio.to_thread(get_known_players)
+    online_players = await asyncio.to_thread(get_online_mc_players)
+    if not online_players:
+        embed = discord.Embed(
+            title="⚠️ KHÔNG CÓ NGƯỜI CHƠI ONLINE TRÊN SERVER MINECRAFT",
+            description=(
+                "───────────────────────────\n" +
+                "Hiện tại **không có ai đang ở trong server Minecraft** để hiển thị danh sách lựa chọn!\n\n" +
+                "• Người chơi cần phải đăng nhập vào game trước.\n" +
+                "• Hoặc nếu anh muốn gõ đổi chế độ ngay lập tức, dùng lệnh nhanh:\n" +
+                "  👉 `gm <mode> <tên_player>`\n" +
+                "  *(Ví dụ: `gm creative PE_KhangKYT` hoặc `gm survival phb.duong`)*\n" +
+                "───────────────────────────"
+            ),
+            color=0xe67e22,
+            timestamp=datetime.datetime.now()
+        )
+        embed.set_footer(text="KhangSMP Admin Core", icon_url=interaction.user.display_avatar.url)
+        await interaction.followup.send(embed=embed)
+        return
+
     embed = discord.Embed(
         title="🎮 BẢNG ĐIỀU KHIỂN CHẾ ĐỘ CHƠI (GAMEMODE)",
         description=(
             "───────────────────────────\n" +
-            "Vui lòng chọn người chơi và chế độ muốn áp dụng ở 2 menu bên dưới:\n" +
-            "• **Bước 1:** Chọn người chơi trong danh sách.\n" +
+            "Đã quét thấy **" + str(len(online_players)) + "** người chơi đang online trong game:\n" +
+            "• **Bước 1:** Chọn người chơi đang online ở Menu 1.\n" +
             "• **Bước 2:** Chọn chế độ chơi (Survival, Creative, Spectator, Adventure).\n" +
-            "• **Bước 3:** Nhấn nút **⚡ Áp Dụng Ngay** để kích hoạt!\n" +
+            "• **Bước 3:** Nhấn nút **⚡ Áp Dụng Ngay**!\n" +
             "───────────────────────────"
         ),
         color=0x9b59b6,
         timestamp=datetime.datetime.now()
     )
     embed.set_footer(text="KhangSMP Admin Core", icon_url=interaction.user.display_avatar.url)
-    view = GamemodeView(interaction.user, player_options)
+    view = GamemodeView(interaction.user, online_players)
     await interaction.followup.send(embed=embed, view=view)
 
 @staff_bot.tree.command(name="endlock", description="🌌 Khóa, Mở hoặc Xem trạng thái cổng The End")
@@ -527,22 +561,41 @@ async def on_message(message: discord.Message):
 
     if content in ("gamemode", "!gamemode", "gm", "!gm"):
         async with message.channel.typing():
-            player_options = await asyncio.to_thread(get_known_players)
+            online_players = await asyncio.to_thread(get_online_mc_players)
+            if not online_players:
+                embed = discord.Embed(
+                    title="⚠️ KHÔNG CÓ NGƯỜI CHƠI ONLINE TRÊN SERVER MINECRAFT",
+                    description=(
+                        "───────────────────────────\n" +
+                        "Hiện tại **không có ai đang ở trong server Minecraft** để hiển thị danh sách lựa chọn!\n\n" +
+                        "• Người chơi cần phải đăng nhập vào game trước.\n" +
+                        "• Hoặc nếu anh muốn gõ đổi chế độ ngay lập tức, dùng lệnh nhanh:\n" +
+                        "  👉 `gm <mode> <tên_player>`\n" +
+                        "  *(Ví dụ: `gm creative PE_KhangKYT` hoặc `gm survival phb.duong`)*\n" +
+                        "───────────────────────────"
+                    ),
+                    color=0xe67e22,
+                    timestamp=datetime.datetime.now()
+                )
+                embed.set_footer(text="KhangSMP Admin Core", icon_url=message.author.display_avatar.url)
+                await message.reply(embed=embed)
+                return
+
             embed = discord.Embed(
                 title="🎮 BẢNG ĐIỀU KHIỂN CHẾ ĐỘ CHƠI (GAMEMODE)",
                 description=(
                     "───────────────────────────\n" +
-                    "Vui lòng chọn người chơi và chế độ muốn áp dụng ở 2 menu bên dưới:\n" +
-                    "• **Bước 1:** Chọn người chơi trong danh sách.\n" +
+                    "Đã quét thấy **" + str(len(online_players)) + "** người chơi đang online trong game:\n" +
+                    "• **Bước 1:** Chọn người chơi đang online ở Menu 1.\n" +
                     "• **Bước 2:** Chọn chế độ chơi (Survival, Creative, Spectator, Adventure).\n" +
-                    "• **Bước 3:** Nhấn nút **⚡ Áp Dụng Ngay** để kích hoạt!\n" +
+                    "• **Bước 3:** Nhấn nút **⚡ Áp Dụng Ngay**!\n" +
                     "───────────────────────────"
                 ),
                 color=0x9b59b6,
                 timestamp=datetime.datetime.now()
             )
             embed.set_footer(text="KhangSMP Admin Core", icon_url=message.author.display_avatar.url)
-            view = GamemodeView(message.author, player_options)
+            view = GamemodeView(message.author, online_players)
             await message.reply(embed=embed, view=view)
         return
 
