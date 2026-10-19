@@ -187,23 +187,38 @@ def search_knowledge(query: str, max_results: int = 5) -> str:
     return "\n\n".join(context_parts)
 
 # ================= Permission Management =================
-# Yêu cầu Manage Guild hoặc Administrator cho tất cả lệnh
+# KHÓA BẢO MẬT ĐỘC QUYỀN: Chỉ duy nhất @khangmc_vn (ID: 1263707768876044382)
+# Chặn toàn bộ người dùng khác, chặn luôn cả Owner server Discord!
+AUTHORIZED_OWNER_ID = 1263707768876044382
+
 def is_manager(member: discord.Member) -> bool:
-    """Kiểm tra member có quyền quản lý server không."""
-    return member.guild_permissions.manage_guild or member.guild_permissions.administrator
+    """Kiểm tra member có phải là anh Khang (@khangmc_vn) không."""
+    if not member:
+        return False
+    return getattr(member, 'id', None) == AUTHORIZED_OWNER_ID
 
 async def check_manager_interaction(interaction: discord.Interaction) -> bool:
     """Kiểm tra quyền cho interaction (slash command)."""
-    if not interaction.guild:
-        return False
-    member = interaction.guild.get_member(interaction.user.id)
-    if not member:
-        return False
-    has_perm = is_manager(member)
-    if not has_perm:
-        # Log unauthorized attempt
-        logger.warning(f"Unauthorized command attempt by {interaction.user} (ID: {interaction.user.id}) in guild {interaction.guild.id} for command {interaction.command.name if interaction.command else 'unknown'}")
-    return has_perm
+    if interaction.user.id == AUTHORIZED_OWNER_ID:
+        return True
+    logger.warning(
+        f'Unauthorized command attempt by {interaction.user} (ID: {interaction.user.id}) '
+        f'in guild {interaction.guild.id if interaction.guild else DM} for command '
+        f'{interaction.command.name if interaction.command else unknown}'
+    )
+    return False
+
+@bot.tree.interaction_check
+async def global_tree_interaction_check(interaction: discord.Interaction) -> bool:
+    """Toàn bộ lệnh slash của bot chỉ chấp nhận tương tác từ anh Khang (@khangmc_vn)."""
+    if interaction.user.id == AUTHORIZED_OWNER_ID:
+        return True
+    if not interaction.response.is_done():
+        await interaction.response.send_message(
+            '❌ Bạn không có quyền sử dụng bot này. Bot được khóa bảo mật độc quyền cho @khangmc_vn.',
+            ephemeral=True
+        )
+    return False
 
 def manager_only():
     """Decorator cho prefix command yêu cầu quyền quản lý."""
@@ -728,6 +743,11 @@ async def on_message(message: discord.Message):
     if message.author == bot.user or message.author.bot:
         return
 
+    # ================= KHÓA ĐỘC QUYỀN DUY NHẤT CHO @khangmc_vn =================
+    # Chặn toàn bộ người dùng khác (kể cả Owner server Discord)
+    if message.author.id != AUTHORIZED_OWNER_ID:
+        return
+
     # Process Nối Từ minigame messages
     await handle_noitu_message(message)
 
@@ -953,12 +973,11 @@ class ClearConfirmView(discord.ui.View):
 
 
 @bot.tree.command(name="clear", description="Xóa toàn bộ tin nhắn trong một kênh")
-@discord.app_commands.default_permissions(manage_guild=True)
 @discord.app_commands.describe(channel="Chọn kênh muốn xóa toàn bộ tin nhắn")
 @discord.app_commands.guild_only()
 async def clear_slash(interaction: discord.Interaction, channel: discord.TextChannel):
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server hoặc Administrator để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
 
     embed = discord.Embed(
@@ -990,7 +1009,7 @@ bot.tree.add_command(noitu_group)
 @bot.tree.command(name="ping", description="Kiểm tra độ trễ của bot")
 async def ping_slash(interaction: discord.Interaction):
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
     if ALLOWED_CHANNEL_ID is not None and interaction.channel_id != ALLOWED_CHANNEL_ID:
         await interaction.response.send_message(
@@ -1093,7 +1112,7 @@ async def debug_0102(interaction: discord.Interaction):
 @bot.tree.command(name="info", description="Thông tin về bot")
 async def info_slash(interaction: discord.Interaction):
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
     if ALLOWED_CHANNEL_ID is not None and interaction.channel_id != ALLOWED_CHANNEL_ID:
         await interaction.response.send_message(
@@ -1115,7 +1134,7 @@ async def info_slash(interaction: discord.Interaction):
 @bot.tree.command(name="serverinfo", description="Xem thông tin server Minecraft (từ WebSocket)")
 async def serverinfo_slash(interaction: discord.Interaction):
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
 
     async with _server_stats_lock:
@@ -1191,7 +1210,7 @@ async def serverinfo_slash(interaction: discord.Interaction):
 @bot.tree.command(name="help", description="Danh sách các lệnh có sẵn")
 async def help_slash(interaction: discord.Interaction):
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
     if ALLOWED_CHANNEL_ID is not None and interaction.channel_id != ALLOWED_CHANNEL_ID:
         await interaction.response.send_message(
@@ -1659,7 +1678,6 @@ customrole_group = discord.app_commands.Group(name="customrole", description="Qu
 
 # Subcommand: create
 @customrole_group.command(name="create", description="Tạo một custom role với tên và màu tùy chọn")
-@discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.describe(
     name="Tên role (có thể gõ tiếng Việt có dấu hoặc Tiếng Anh/Unicode)",
     color="Mã màu hex (ví dụ: #FF0000) hoặc tên màu (gõ để tìm)",
@@ -1685,7 +1703,7 @@ customrole_group = discord.app_commands.Group(name="customrole", description="Qu
 async def customrole_create(interaction: discord.Interaction, name: str, color: str, target: discord.Member = None, style: str = "Normal"):
     # Check manager permission (Manage Guild / Admin)
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
 
     # Check bot permissions
@@ -1765,12 +1783,11 @@ async def customrole_create(interaction: discord.Interaction, name: str, color: 
 
 # Subcommand: list
 @customrole_group.command(name="list", description="Liệt kê tất cả custom role trong server")
-@discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.guild_only()
 async def customrole_list(interaction: discord.Interaction):
     # Check manager permission
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server để dùng lệnh này.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
 
     data = load_custom_roles()
@@ -1825,11 +1842,9 @@ async def customrole_list(interaction: discord.Interaction):
 
 # Subcommand: remove
 @customrole_group.command(name="remove", description="Xóa một custom role")
-@discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.describe(
     role="Role cần xóa (chỉ có thể xóa role do bot tạo)"
 )
-@discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.guild_only()
 async def customrole_remove(interaction: discord.Interaction, role: discord.Role):
     # Check permissions
@@ -2017,7 +2032,6 @@ class RoleSelectView(discord.ui.View):
 
 # Lệnh /by
 @bot.tree.command(name="by", description="Tạo panel chọn role (yêu cầu quyền Manage Roles)")
-@discord.app_commands.default_permissions(manage_roles=True)
 @discord.app_commands.describe(
     title="Tiêu đề panel",
     description="Mô tả hướng dẫn",
@@ -2034,7 +2048,7 @@ async def by_command(
 ):
     # Kiểm tra quyền
     if not await check_manager_interaction(interaction):
-        await interaction.response.send_message("❌ Bạn cần quyền Quản lý Server.", ephemeral=True)
+        await interaction.response.send_message("❌ Bạn không có quyền sử dụng bot này. Chỉ dành riêng cho @khangmc_vn.", ephemeral=True)
         return
     
     target_channel = channel or interaction.channel
@@ -2308,7 +2322,6 @@ async def paste_cmd(interaction: discord.Interaction):
 
 
 @bot.tree.command(name="reload", description="🔄 Khởi động lại bot để nạp code mới (Quản trị viên)")
-@app_commands.default_permissions(administrator=True)
 async def reload_cmd(interaction: discord.Interaction):
     """Tu thay the process (execv) - PID giu nguyen nen relay/web khong anh huong."""
     try:
