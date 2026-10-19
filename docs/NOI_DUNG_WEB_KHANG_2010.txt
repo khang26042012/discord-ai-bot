@@ -1,0 +1,119 @@
+======================================================================
+             TOÀN BỘ NỘI DUNG VĂN BẢN TRÊN WEB 20/10
+                (DỰ ÁN: SỰ THỨC GIẤC CỦA KHANG)
+======================================================================
+
+Lưu ý: Đây là bản nội dung tổng hợp để cập nhật vào mã nguồn website.
+
+----------------------------------------------------------------------
+PHẦN 1: TIÊU ĐỀ TRANG WEB (HIỂN THỊ TRÊN TAB TRÌNH DUYỆT)
+----------------------------------------------------------------------
+Tiêu đề: Sự thức giấc của Khang - Ngày 20/10
+
+
+----------------------------------------------------------------------
+PHẦN 2: CỐT TRUYỆN CHÍNH — 16 PHÂN ĐOẠN LỜI THOẠI CỦA KHANG
+(Mỗi lần người xem chạm/click vào màn hình, các câu này sẽ lần lượt hiện ra)
+----------------------------------------------------------------------
+[text-1]: nè, cậu ơi...
+[text-2]: tớ là Khang đây.
+[text-3]: hôm nay tớ xuất hiện ở đây là vì có một điều muốn nói với cậu.
+[text-4]: mà khoan... hôm nay cậu xinh thế nhỉ.
+[text-5]: cậu biết hôm nay sắp đến ngày gì không?
+[text-6]: là ngày 20/10 đó, nên tớ đã chuẩn bị một món quà nhỏ dành riêng cho cậu.
+[text-7]: đầu tiên, tớ chúc cậu luôn mạnh khỏe, bình an và gặp thật nhiều điều tốt đẹp.
+[text-8]: mong cậu sẽ luôn xinh đẹp theo cách riêng của mình, chẳng cần phải giống bất kỳ ai cả.
+[text-9]: và dù hôm nay có chuyện gì xảy ra, tớ vẫn mong cậu sẽ luôn giữ nụ cười trên môi.
+[text-10]: nhìn nè, tớ có một ngọn cỏ bốn lá muốn tặng cậu.
+[text-11]: nào, đưa tay đây... tớ tặng cậu đấy, nhớ giữ lấy may mắn này nhé.
+[text-12]: tớ mong những điều cậu đang chờ đợi sẽ dần trở thành hiện thực.
+[text-13]: à mà... tớ hỏi cậu một điều được không?
+[text-14]: tớ mong mỗi ngày của cậu đều có những niềm vui nho nhỏ, có người để sẻ chia và có những khoảnh khắc khiến cậu mỉm cười khi nhớ lại.
+[text-15]: nếu có những ngày mệt mỏi, cậu cũng đừng quá khắt khe với bản thân nhé. cậu không cần lúc nào cũng phải mạnh mẽ, cũng chẳng cần làm hài lòng tất cả mọi người.
+[text-16]: cuối cùng, tớ là Khang, và tớ muốn gửi đến cậu một lời chúc thật đặc biệt trong ngày 20/10. mong cậu luôn được yêu thương, gặp những người tử tế, sống thật vui và đừng bao giờ quên rằng bản thân cậu cũng xứng đáng nhận được những điều tốt đẹp nhất. chúc cậu 20/10 thật hạnh phúc nhé!
+
+
+----------------------------------------------------------------------
+PHẦN 3: LỜI BÀI HÁT PHỤ ĐỀ (KARAOKE SUB ĐỒNG BỘ THEO NHẠC NỀN)
+----------------------------------------------------------------------
+- chờ anh chút thôi
+- khi mùa đông vừa sang
+- xếp lại hết ngổn ngang
+- dù xa cách khung trời
+- vẫn gần em thôi
+- ước mai bên cạnh nhau
+- khép đôi mi thật lâu
+- rồi anh sẽ tìm tới
+- có anh ở đây rồi
+- đã phiền em phải đợi
+- kề bên anh, nơi này có anh
+- cầm tay anh, dựa vai anh
+- nhẹ ôm lấy em
+- gió mang câu tình ca
+- ngàn ánh sao vụt qua
+- yêu say đắm như ngày đầu
+
+
+----------------------------------------------------------------------
+PHẦN 4: CÁC CÂU THÔNG BÁO TƯƠNG TÁC & GỢI Ý (HINT)
+(Hiện lên góc màn hình khi chờ nạp nhạc hoặc chuyển cảnh)
+----------------------------------------------------------------------
+- đợi chút xíu đii
+- đợi chút nữa thui
+- xíu nữa
+- sắp được rùi
+- 1 chút thuii
+- chạm lại để bật nhạc
+- sang đi~
+
+
+----------------------------------------------------------------------
+PHẦN 5: MÀN HÌNH BƠM NHIÊN LIỆU MÁY BAY CHIA SẺ
+----------------------------------------------------------------------
+- Lời ngỏ: giúp tớ chia sẻ trang web này tới mọi người được không? cảm ơn cậu nhiều
+- Nút bấm: Đồng ý (Hiển thị tiến trình: 80%)
+- Trạng thái: Đang bơm nhiên liệu...
+- Hoàn tất: Đã nạp đầy năng lượng! ✈
+- Cất cánh: Máy bay đang cất cánh ✈
+- Thông báo copy: ✓ Đã sao chép
+
+
+----------------------------------------------------------------------
+PHẦN 6: THẺ TÁC GIẢ CUỐI TRANG (FOOTER / CREDIT)
+----------------------------------------------------------------------
+- Dòng 1: Và mình là
+- Tên/Thương hiệu: phantrongkhangg
+- Kênh liên hệ: theo dõi mình tại TikTok
+- Tên tài khoản: @phantrongkhangg ↗
+
+(Lưu ý: Đã xóa dòng cảm ơn DA Labs theo yêu cầu.)
+
+
+----------------------------------------------------------------------
+PHẦN 7: THƯ CHÚC MỪNG NGÀY 20/10
+----------------------------------------------------------------------
+Tiêu đề thư: Gửi cậu, người con gái đặc biệt trong ngày 20/10 💌
+
+Gửi cậu,
+
+Tớ là Khang. Tớ không biết khi cậu đọc được những dòng này, cậu đang vui vẻ hay đang có chút mệt mỏi, nhưng tớ hy vọng bức thư nhỏ này có thể mang đến cho cậu một nụ cười.
+
+Nhân ngày 20/10, tớ muốn gửi đến cậu những lời chúc chân thành nhất. Chúc cậu luôn xinh đẹp, mạnh khỏe, bình an và gặp thật nhiều may mắn. Mong rằng những điều tốt đẹp sẽ đến với cậu, những ước mơ của cậu sẽ dần trở thành hiện thực và mỗi ngày trôi qua đều có ít nhất một điều khiến cậu cảm thấy hạnh phúc.
+
+Cậu biết không, đôi khi hạnh phúc chẳng phải điều gì quá lớn lao. Đó có thể là một buổi chiều đầy nắng, một bài hát yêu thích, một tin nhắn bất ngờ hay đơn giản là có ai đó thật lòng quan tâm đến cậu.
+
+Tớ mong cậu sẽ luôn gặp được những người tử tế, những người biết trân trọng cậu và không khiến cậu phải nghi ngờ giá trị của chính mình. Nếu một ngày nào đó cậu cảm thấy mệt mỏi, hãy cho bản thân thời gian nghỉ ngơi nhé. Cậu không cần phải hoàn hảo, cũng không cần lúc nào cũng tỏ ra mạnh mẽ. Chỉ cần cậu vẫn đang cố gắng sống tốt và yêu thương bản thân, như thế đã là đáng quý rồi.
+
+Tớ chẳng có món quà gì quá lớn lao để tặng cậu, chỉ có những dòng chữ này cùng một chút chân thành được gửi gắm vào đó. Hy vọng khi đọc đến đây, cậu sẽ cảm nhận được rằng trên thế giới rộng lớn này, vẫn luôn có những điều nhỏ bé nhưng ấm áp đang chờ đón cậu.
+
+Cuối cùng, chúc cậu một ngày 20/10 thật vui vẻ. Mong nụ cười sẽ luôn ở trên môi cậu, ánh mắt luôn lấp lánh những điều hy vọng và trái tim luôn đủ dịu dàng để yêu thương cuộc sống.
+
+Chúc cậu luôn hạnh phúc, không chỉ riêng ngày 20/10 mà còn trong tất cả những ngày bình thường sau này.
+
+Thân gửi,
+Khang.
+
+
+======================================================================
+HẾT NỘI DUNG
+======================================================================
