@@ -208,18 +208,6 @@ async def check_manager_interaction(interaction: discord.Interaction) -> bool:
     )
     return False
 
-@bot.tree.interaction_check
-async def global_tree_interaction_check(interaction: discord.Interaction) -> bool:
-    """Toàn bộ lệnh slash của bot chỉ chấp nhận tương tác từ anh Khang (@khangmc_vn)."""
-    if interaction.user.id == AUTHORIZED_OWNER_ID:
-        return True
-    if not interaction.response.is_done():
-        await interaction.response.send_message(
-            '❌ Bạn không có quyền sử dụng bot này. Bot được khóa bảo mật độc quyền cho @khangmc_vn.',
-            ephemeral=True
-        )
-    return False
-
 def manager_only():
     """Decorator cho prefix command yêu cầu quyền quản lý."""
     async def predicate(ctx):
@@ -248,6 +236,18 @@ intents.guilds = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+
+@bot.tree.interaction_check
+async def global_tree_interaction_check(interaction: discord.Interaction) -> bool:
+    """Toàn bộ lệnh slash của bot chỉ chấp nhận tương tác từ anh Khang (@khangmc_vn)."""
+    if interaction.user.id == AUTHORIZED_OWNER_ID:
+        return True
+    if not interaction.response.is_done():
+        await interaction.response.send_message(
+            '❌ Bạn không có quyền sử dụng bot này. Bot được khóa bảo mật độc quyền cho @khangmc_vn.',
+            ephemeral=True
+        )
+    return False
 
 # (Module nhạc đã được gỡ bỏ theo yêu cầu - 2026/08/24)
 
