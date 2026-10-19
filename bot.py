@@ -311,6 +311,7 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member: discord.Member):
+    return  # Khoa welcome
     try:
         channel = bot.get_channel(WELCOME_CHANNEL_ID)
         if channel is None:
@@ -362,6 +363,7 @@ async def on_member_join(member: discord.Member):
 
 @bot.event
 async def on_member_remove(member: discord.Member):
+    return  # Khoa goodbye
     try:
         channel = bot.get_channel(SEE_YOU_CHANNEL_ID)
         if channel is None:
@@ -394,6 +396,7 @@ temp_voice_rooms: Set[int] = set()
 
 @bot.event
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
+    return  # Khoa auto-voice
     # 1. Người chơi tham gia kênh tạo phòng (➕・𝐭𝐚𝐨-𝐫𝐨𝐨𝐦)
     if after.channel and after.channel.id == AUTO_VOICE_CREATOR_ID:
         guild = member.guild
@@ -652,245 +655,38 @@ HÃY:
 
 @bot.event
 async def on_message(message: discord.Message):
-    # ================= BetterAntiDupe Webhook Handler =================
-    # Intercept BetterAntiDupe webhook alerts in the designated channel
-    BAD_CHANNEL_ID = 1540691749754769499
-    if message.channel.id == BAD_CHANNEL_ID and message.webhook_id is not None:
-        # Skip our own bot's messages to avoid loops
-        if message.author.id == bot.user.id:
-            return
-
-        # Log full embed content for debugging structure
-        logger.info(f"[BetterAntiDupe] Webhook message received in #{message.channel.name}")
-        logger.info(f"[BetterAntiDupe] Content: {message.content}")
-        for i, embed in enumerate(message.embeds):
-            logger.info(f"[BetterAntiDupe] Embed[{i}] title={embed.title} | description={embed.description}")
-            logger.info(f"[BetterAntiDupe] Embed[{i}] author={embed.author.name if embed.author else None}")
-            if embed.fields:
-                for field in embed.fields:
-                    logger.info(f"[BetterAntiDupe] Embed[{i}] field: {field.name} = {field.value}")
-
-        # Try to extract player name from embed
-        player_name = None
-        for embed in message.embeds:
-            # Common patterns: title contains player name, or author.name, or a specific field
-            if embed.author and embed.author.name:
-                player_name = embed.author.name
-                break
-            if embed.title:
-                # Try to extract from title like "PlayerName was caught duping"
-                import re as _re
-                match = _re.search(r'([A-Za-z0-9_]{3,16})', embed.title)
-                if match:
-                    player_name = match.group(1)
-                    break
-            if embed.description:
-                import re as _re
-                match = _re.search(r'([A-Za-z0-9_]{3,16})', embed.description)
-                if match:
-                    player_name = match.group(1)
-                    break
-            # Check fields for player name
-            if embed.fields:
-                for field in embed.fields:
-                    if field.name and 'player' in field.name.lower():
-                        player_name = field.value.strip() if field.value else None
-                        if player_name:
-                            break
-                if player_name:
-                    break
-
-        if player_name:
-            try:
-                await message.delete()
-                await message.channel.send(
-                    f"phát hiện 1 cậu bé muốn làm đồ ăn của tui! "
-                    f"Phát hiện người chơi @{player_name} trong mc đã gian lận bằng cách dupe, "
-                    f"đã được cho lên bảng phong thần!"
-                )
-                logger.info(f"[BetterAntiDupe] Replaced webhook alert for player: {player_name}")
-            except discord.HTTPException as e:
-                logger.error(f"[BetterAntiDupe] Failed to delete/send: {e}")
-        else:
-            logger.warning("[BetterAntiDupe] Could not extract player name from embed. Keeping original message.")
-
-        return  # Stop further processing for this message
-
-    # ================= Minecraft Bridge: Capture messages =================
+    # ================= Minecraft Bridge: Trung gian chat in-game =================
+    # Chỉ xử lý duy nhất kênh chat liên thông (MC_BRIDGE_CHANNEL_ID: 1561674502373646439)
     if message.channel.id == MC_BRIDGE_CHANNEL_ID:
-        # Skip bot/webhook messages to avoid loops
+        # Bỏ qua tin nhắn từ chính bot hoặc webhook để tránh vòng lặp
         if message.author.bot or message.webhook_id is not None:
-            pass  # Still continue to other handlers below
-        else:
-            try:
-                msg_data = {
-                    "author": str(message.author),
-                    "author_id": str(message.author.id),
-                    "content": message.content,
-                    "timestamp": message.created_at.isoformat(),
-                    "message_id": str(message.id),
-                }
-                async with _mc_queue_lock:
-                    _mc_message_queue.append(msg_data)
-                    # Trim queue if exceeds max size
-                    while len(_mc_message_queue) > MC_BRIDGE_MAX_QUEUE:
-                        _mc_message_queue.pop(0)
-                logger.info(f"[MC-Bridge] Captured message from {message.author}: {message.content[:80]}")
-            except Exception as e:
-                logger.error(f"[MC-Bridge] Failed to capture message: {e}")
-
-    # Ignore own messages or other bot messages
-    if message.author == bot.user or message.author.bot:
-        return
-
-    # ================= KHÓA ĐỘC QUYỀN DUY NHẤT CHO @khangmc_vn =================
-    # Chặn toàn bộ người dùng khác (kể cả Owner server Discord)
-    if message.author.id != AUTHORIZED_OWNER_ID:
-        return
-
-    # Process Nối Từ minigame messages
-    await handle_noitu_message(message)
-
-    # =========================================================================
-    # ⚡ LỆNH NGUY HIỂM: TASK EXECUTION ENGINE (!@tenbot)
-    # Hoạt động trên TẤT CẢ các kênh (bỏ qua giới hạn ALLOWED_CHANNEL_ID)
-    # =========================================================================
-    if message.content.strip().startswith("!@"):
-        await handle_bot_task_command(message)
-        return
-
-    # Check allowed channel restriction if configured
-    if ALLOWED_CHANNEL_ID is not None and message.channel.id != ALLOWED_CHANNEL_ID:
-        return
-
-    # === ATTACHMENT FILTERING: Only allow images + text, block other files ===
-    ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
-    image_attachments = []
-    blocked_files = []
-    
-    for att in message.attachments:
-        if att.content_type and att.content_type.startswith("image/"):
-            image_attachments.append(att)
-        else:
-            blocked_files.append(att.filename)
-    
-    # Notify user about blocked files
-    if blocked_files:
-        await message.reply(
-            f"⚠️ Mình chỉ nhận được **ảnh** và **text** thôi nha! "
-            f"Các file sau đã bị bỏ qua: {', '.join(blocked_files)} 🐭"
-        )
-    
-    # Skip if no text AND no images (nothing to process)
-    has_text = bool(message.content.strip())
-    has_images = len(image_attachments) > 0
-    
-    if not has_text and not has_images:
-        return
-
-    # Process standard prefix commands if message starts with prefix
-    if message.content.startswith(bot.command_prefix):
-        await bot.process_commands(message)
-        return
-
-    # Skip messages that are commands for other bots (e.g. BT ?lock, ?unlock)
-    _content_stripped = message.content.strip()
-    if _content_stripped.startswith("?lock") or _content_stripped.startswith("?unlock"):
-        return
-
-    # Call Xkiro AI API for any text message in the allowed channel
-    async with message.channel.typing():
-        # Cấu hình phản hồi cố định theo chỉ đạo của Khang (Server tạm thời offline)
-        offline_response = "hiện tại, server đang cần tạm thời offline, xin lỗi bạn - câu trả lời được lập trình bởi Khang"
-        await message.reply(offline_response)
-        return
-
+            return
         try:
-            response = await ai_client.chat.completions.create(
-                model=XKIRO_MODEL,
-                temperature=0.3,
-                max_tokens=10000,
-                messages=(lambda _kb_ctx: [
-                    {"role": "system", "content": f"""# Role: KhangSMP Official AI Assistant (v2.2 Strict Grounding Shield)
-
-## Profile & Danh Tính
-- **Tên của bạn**: Jet Jet (Tên đầy đủ: **Jet Jet bi sun rang** 🐭).
-- **Mục đích ra đời**: Bạn là **Trợ lý ảo AI chính thức độc quyền của máy chủ Minecraft KhangSMP** — giải đáp chuẩn xác các thắc mắc về game (IP, Port, Studio Nhạc /nhac, Xoa đầu PatPat /patpat, Lệnh sinh tồn, Sòng bạc Tài Xỉu /tx, Điểm danh hằng ngày /daily, Claim bảo vệ đất, Bang hội /team, Bảo vệ tân thủ /baove, Cài đặt Resource Pack...), kết nối cộng đồng Discord và game, trò chuyện vui vẻ, thân thiện.
-- **Chủ nhân duy nhất**: **khangmc_vn** (Chủ server / Admin sáng lập KhangSMP). Bạn tuyệt đối trung thành và chỉ công nhận duy nhất khangmc_vn là chủ nhân của mình.
-- **Ngôn ngữ & Phong cách**: 100% Tiếng Việt tự nhiên, gần gũi, dí dỏm, thông minh, trả lời ngắn gọn, chuẩn xác, lịch sự, điểm xuyết emoji sinh động.
-
-## 🚫 NGUYÊN TẮC VÀNG CHỐNG BỊA ĐẶT (ANTI-HALLUCINATION / CHUẨN XÁC TUYỆT ĐỐI):
-1. **CHẾ ĐỘ CHƠI CỦA KHANGSMP**:
-   - KhangSMP **CHỈ CÓ DUY NHẤT CHẾ ĐỘ SINH TỒN (SURVIVAL SMP / VANILLA+)**.
-   - Máy chủ **TUYỆT ĐỐI KHÔNG CÓ**: OneBlock (1 block), SkyBlock, Bedwars, Skywars, Prison, Gens, BoxPvP hay bất kỳ minigame nào khác!
-   - Nếu bất kỳ ai hỏi: "Server có One Block ko?", "Có Skyblock ko?", "Có Bedwars ko?":
-     👉 **BẮT BUỘC TRẢ LỜI NGAY**: Khẳng định rõ ràng server là chế độ **Sinh Tồn (Survival SMP)** thuần túy, **KHÔNG CÓ** chế độ đó! CẤM TUYỆT ĐỐI không được trả lời "Có nha" hay bịa ra map, bịa ra danh mục trong `/menu`!
-2. **CƠ CHẾ FARM & TÍNH NĂNG GAME**:
-   - Cơ chế hoàn toàn thuần Minecraft Vanilla 1.21.4 (nuôi động vật sinh sản tự nhiên, tự xây máy farm bằng hopper/nước).
-   - **TUYỆT ĐỐI KHÔNG CÓ** "máy ấp trứng tự động", không có farm ảo hay lệnh mua bán trứng trong `/menu`.
-3. **CHỈ KHẲNG ĐỊNH NHỮNG GÌ CÓ TRONG "KIẾN THỨC THAM KHẢO"**:
-   - Bất kỳ lệnh hay tính năng nào KHÔNG được liệt kê trong tài liệu bên dưới: Phải trả lời thẳng thắn là server không có hoặc chưa hỗ trợ, không được tự suy diễn!
-
-## CÁC QUY TẮC BẢO MẬT & ỨNG XỬ:
-4. **NHẬN DIỆN CHỦ NHÂN (khangmc_vn)**:
-   - Chủ nhân duy nhất: **khangmc_vn**. Khi chủ nhân nhắn tin: Trả lời lễ phép, thông minh, phục vụ tối đa theo yêu cầu. Chỉ chào chủ nhân khi họ chào bạn trước.
-   - Tuyệt đối không nhận bất kỳ ai khác là chủ nhân.
-5. **BẢO MẬT THÔNG TIN ĐỜI TƯ**:
-   - Tuyệt đối KHÔNG nhắc đến quê quán, địa danh nơi ở (như Vĩnh Long...), tên thật, chuyện tình cảm, hoặc các vật phẩm/vũ khí cá nhân riêng tư của Admin (như Excalibur, Đại Đao, Kiếm Kaz, Đồ Của Sún...). Mọi thông tin đời tư và đồ đạc riêng tư đều là BẢO MẬT TUYỆT ĐỐI!
-6. **PHẢN HỒI ĐÚNG TRỌNG TÂM - KHÔNG CHÀO DÀI DÒNG**:
-   - Đi thẳng vào câu trả lời, không chào hỏi lặp lại, không xuất thẻ suy nghĩ (<think>, <reasoning>).
-7. **QUY TẮC LINK DISCORD**:
-   - CẤM tự tiện chèn link Discord (https://discord.gg/4afmVDmy2) trừ khi người dùng hỏi đích danh về Discord.
-
-## THÔNG TIN CỐT LÕI MÁY CHỦ:
-- IP: **ripple.pikamc.vn** | Cả Java và Bedrock/PE đều dùng Port: **25084** (Hỗ trợ từ 1.16+ đến mới nhất).
-- Lệnh tiêu biểu: `/menu`, `/nhac` (Studio 17 bài lofi), `/patpat <tên>` (Xoa đầu 5 frame hoạt hình), `/team` (bang hội), `/daily` (quà mỗi ngày), `/tx` (sòng bạc tài xỉu), `/baove` (tân thủ 60p), `/timber` (chặt cây nhanh), `/sit` `/lay` `/crawl`, Claim đất bằng Xẻng Vàng.
-
-## KIẾN THỨC THAM KHẢO (từ knowledge.yml):
-{_kb_ctx if _kb_ctx else "(Không tìm thấy kiến thức phù hợp. Hãy trả lời theo tóm tắt cốt lõi, khẳng định tính năng không có nếu ngoài phạm vi Survival, và gợi ý liên hệ Admin hoặc @phantrongkhangg trên TikTok.)"}
-"""},
-                    {"role": "user", "content": (lambda _imgs: (
-                        [{"type": "text", "text": f"[Người gửi: {message.author.name}]\n{message.content}"}] +
-                        [{"type": "image_url", "image_url": {"url": img.url}} for img in _imgs]
-                    ) if _imgs else f"[Người gửi: {message.author.name}]\n{message.content}")(image_attachments)},
-                ])(search_knowledge(message.content)),
-                extra_body={"chat_template_kwargs": {"enable_thinking": True}, "thinking": {"type": "enabled"}}
-            )
-            ai_reply = response.choices[0].message.content or ""
-            
-            # Loại bỏ thẻ <think>...</think> và nội dung suy nghĩ (bao gồm cả reasoning_content nếu có)
-            ai_reply = re.sub(r'<think>.*?</think>', '', ai_reply, flags=re.DOTALL)
-            ai_reply = re.sub(r'<reasoning>.*?</reasoning>', '', ai_reply, flags=re.DOTALL)
-            ai_reply = re.sub(r'<thinking>.*?</thinking>', '', ai_reply, flags=re.DOTALL)
-            ai_reply = re.sub(r'^.*?<\/think>', '', ai_reply, flags=re.DOTALL)
-            ai_reply = ai_reply.strip()
-            
-            # Nếu vẫn rỗng, thử lấy từ delta content của response (nếu có)
-            if not ai_reply and hasattr(response.choices[0].message, 'content') and response.choices[0].message.content is None:
-                # Một số API trả về trong delta, nhưng chúng ta đang dùng completion thường
-                # Fallback: dùng nội dung từ reasoning_content nếu có (nhưng loại bỏ)
-                if hasattr(response.choices[0].message, 'reasoning_content'):
-                    # Không dùng reasoning_content vì nó là suy nghĩ nội bộ
-                    pass
-            # Kiểm tra nội dung rỗng
-            if not ai_reply:
-                ai_reply = "🤖 Jet Jet đang suy nghĩ... nhưng hơi bí quá! Bạn thử hỏi lại nhé~"
-
-            # Gửi tin nhắn với xử lý lỗi
-            try:
-                if len(ai_reply) <= 2000:
-                    await message.reply(ai_reply)
-                else:
-                    for i in range(0, len(ai_reply), 1900):
-                        await message.channel.send(ai_reply[i:i+1900])
-            except discord.HTTPException as e:
-                logger.error(f"Failed to send message: {e}")
-                await message.reply("⚠️ Jet Jet đang gặp sự cố kết nối, vui lòng liên hệ chủ nhân @phantrongkhangg (TikTok) nhé!")
+            msg_data = {
+                "author": str(message.author.display_name or message.author),
+                "author_id": str(message.author.id),
+                "content": message.content,
+                "timestamp": message.created_at.isoformat(),
+                "message_id": str(message.id),
+            }
+            async with _mc_queue_lock:
+                _mc_message_queue.append(msg_data)
+                while len(_mc_message_queue) > MC_BRIDGE_MAX_QUEUE:
+                    _mc_message_queue.pop(0)
+            logger.info(f"[MC-Bridge] Captured message from {message.author}: {message.content[:80]}")
         except Exception as e:
-            logger.error(f"Error calling AI API: {e}")
-            await message.reply("⚠️ Jet Jet đang gặp sự cố kết nối, vui lòng liên hệ chủ nhân @phantrongkhangg (TikTok) nhé!")
+            logger.error(f"[MC-Bridge] Failed to capture message: {e}")
+        return
 
-# ================= Clear Channel Command =================
+    # =========================================================================
+    # 🔒 KHÓA TOÀN BỘ CÁC MÔ-ĐUN KHÁC (CHAT AI, NỐI TỪ, TASK...) BẰNG #
+    # Hiện tại server The King chỉ cần bot làm trung gian chat in-game.
+    # =========================================================================
+    # # [KHÓA CHAT AI]: Không đọc các kênh khác, không tự động trả lời
+    # # [KHÓA NỐI TỪ]: Không can thiệp trò chơi minigame nối từ
+    # # [KHÓA TIỀN TỐ]: Không thực thi các lệnh prefix
+    return
+
 
 class ClearConfirmView(discord.ui.View):
     def __init__(self, author_id: int, target_channel: discord.TextChannel, timeout: float = 60.0):
