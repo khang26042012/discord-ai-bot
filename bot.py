@@ -39,10 +39,10 @@ WELCOME_CHANNEL_ID = int(os.getenv("WELCOME_CHANNEL_ID", "1547613324898869328"))
 SEE_YOU_CHANNEL_ID = int(os.getenv("SEE_YOU_CHANNEL_ID", "1547613328925265972"))
 
 # ================= Discord-to-Minecraft Bridge =================
-MC_BRIDGE_CHANNEL_ID = int(os.getenv("MC_BRIDGE_CHANNEL_ID", "1547620791045324900"))
+MC_BRIDGE_CHANNEL_ID = int(os.getenv("MC_BRIDGE_CHANNEL_ID", "1561674502373646439"))
 MC_BRIDGE_MAX_QUEUE = 100
 NOITU_CHANNEL_ID = int(os.getenv("NOITU_CHANNEL_ID", "1547645186493120564"))
-POLLING_API_KEY = os.getenv("POLLING_API_KEY", "")
+POLLING_API_KEY = os.getenv("POLLING_API_KEY", "khangsmp_mcbridge_key_2026")
 MC_BRIDGE_PORT = int(os.getenv("MC_BRIDGE_PORT", "8080"))
 
 # In-memory message queue for Minecraft polling
