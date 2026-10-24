@@ -480,10 +480,14 @@ async def on_ready():
         except Exception as e:
             logger.error(f"Failed to load music extension: {e}")
     
-    # Sync slash commands
+    # Sync slash commands (Đồng bộ trực tiếp vào Guild để hiện ngay lập tức 0s)
     try:
+        guild_obj = discord.Object(id=AUTHORIZED_GUILD_ID)
+        bot.tree.copy_global_to(guild=guild_obj)
+        synced_guild = await bot.tree.sync(guild=guild_obj)
+        logger.info(f"Synced {len(synced_guild)} slash command(s) directly to Guild {AUTHORIZED_GUILD_ID} (INSTANT)!")
         synced = await bot.tree.sync()
-        logger.info(f"Synced {len(synced)} slash command(s).")
+        logger.info(f"Synced {len(synced)} slash command(s) globally.")
     except Exception as e:
         logger.error(f"Failed to sync slash commands: {e}")
     
@@ -495,6 +499,16 @@ async def on_ready():
         
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="tin nhắn AI"))
     
+    # Tự động cắm chốt 24/7 vào kênh Voice chỉ định
+    try:
+        guild = bot.get_guild(AUTHORIZED_GUILD_ID)
+        if guild:
+            from music import get_player
+            player = get_player(bot, guild)
+            await player.ensure_247_voice()
+    except Exception as e:
+        logger.error(f"[Voice-24/7] Lỗi cắm chốt voice khi khởi động: {e}")
+
     # Start Minecraft Bridge REST API server
     try:
         bot._mc_bridge_runner = await start_mc_bridge_server()
@@ -1017,17 +1031,57 @@ HƯỚNG DẪN DÀNH CHO AI DJ:
             else:
                 messages_payload.append({"role": "user", "content": user_msg_content})
 
-            # 4. Gọi Gemini Flash High Gateway
-            ai_resp = await ai_client.chat.completions.create(
-                model=XKIRO_MODEL,
-                temperature=0.7,
-                max_tokens=1500,
-                messages=messages_payload
-            )
+            # 4. Gọi Gemini AI với bộ công cụ âm nhạc (Native Tool Calling)
+            available_tools = None
+            if player and message.guild:
+                try:
+                    from music import MUSIC_TOOLS_DEFINITIONS, handle_music_tool_call
+                    available_tools = MUSIC_TOOLS_DEFINITIONS
+                except Exception as e_tl:
+                    logger.warning(f"[Tools] Lỗi import tools: {e_tl}")
 
-            reply_text = ai_resp.choices[0].message.content or ""
+            call_kwargs = {
+                "model": XKIRO_MODEL,
+                "temperature": 0.7,
+                "max_tokens": 1500,
+                "messages": messages_payload
+            }
+            if available_tools:
+                call_kwargs["tools"] = available_tools
+                call_kwargs["tool_choice"] = "auto"
 
-            # Kiểm tra và thi hành MUSIC_ACTION nếu có
+            ai_resp = await ai_client.chat.completions.create(**call_kwargs)
+            choice_msg = ai_resp.choices[0].message
+
+            # Nếu AI gọi Tool (get_now_playing, pause_music, skip_music, get_queue, play_music...)
+            if getattr(choice_msg, "tool_calls", None) and player:
+                messages_payload.append(choice_msg)
+                for tc in choice_msg.tool_calls:
+                    fn_name = tc.function.name
+                    try:
+                        fn_args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                    except Exception:
+                        fn_args = {}
+                    logger.info(f"[Tool-Call] AI gọi tool '{fn_name}' với args: {fn_args}")
+                    tool_res = await handle_music_tool_call(bot, message, player, fn_name, fn_args)
+                    messages_payload.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": json.dumps(tool_res, ensure_ascii=False)
+                    })
+
+                # Lượt 2: AI tổng hợp câu trả lời tự nhiên dựa trên kết quả Tool
+                ai_final = await ai_client.chat.completions.create(
+                    model=XKIRO_MODEL,
+                    temperature=0.7,
+                    max_tokens=1500,
+                    messages=messages_payload
+                )
+                reply_text = ai_final.choices[0].message.content or ""
+            else:
+                reply_text = choice_msg.content or ""
+
+            # Hỗ trợ dự phòng nếu AI xuất định dạng [MUSIC_ACTION: ...]
             action_match = re.search(r'\[MUSIC_ACTION:\s*(\{.*?\})\]', reply_text, flags=re.DOTALL)
             if action_match and player and message.guild and message.author.id == AUTHORIZED_OWNER_ID:
                 try:
