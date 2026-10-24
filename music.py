@@ -130,6 +130,7 @@ class GuildMusicPlayer:
         self.volume: float = 0.8
         self.is_paused: bool = False
         self.loop_mode: str = "off"
+        self.autoplay: bool = True  # Tự động gợi ý & nối bài khi hết queue
         self.text_channel: Optional[discord.TextChannel] = None
         self.disconnect_task: Optional[asyncio.Task] = None
         self.now_playing_msg: Optional[discord.Message] = None
@@ -149,6 +150,21 @@ class GuildMusicPlayer:
             self.voice_client = await channel.connect(reconnect=True, self_deaf=True)
         return self.voice_client
 
+    async def fetch_ai_next_song(self, current_title: str) -> Optional[Song]:
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=os.getenv("ROUTER_API_KEY", "sk-c276eac9b4322b74-tyrxri-1fc67c68"), base_url=os.getenv("ROUTER_BASE_URL", "http://nvnmc.asia:26627/v1"))
+            prompt = f"Bài hát vừa phát là: '{current_title}'. Dựa vào phong cách, ca sĩ, giai điệu và thể loại của bài này, hãy gợi ý ĐÚNG 1 TÊN BÀI HÁT tiếp theo để phát nối tiếp (ngắn gọn chỉ trả về tên bài hát và ca sĩ/remix, không có lời dẫn hay dấu ngoặc kép). "
+            resp = await client.chat.completions.create(model=os.getenv("ROUTER_MODEL", "ag/gemini-3.8-flash-low"), messages=[{"role": "user", "content": prompt}], max_tokens=60)
+            suggested = resp.choices[0].message.content.strip().replace('"', "").replace("'", "")
+            if suggested:
+                logger.info(f"[Autoplay] AI đề xuất bài tiếp theo: {suggested}")
+                song = await Song.search(suggested, requester=self.bot.user, loop=self.bot.loop)
+                return song
+        except Exception as e:
+            logger.error(f"[Autoplay] Lỗi gọi AI gợi ý bài: {e}")
+        return None
+
     def play_next(self):
         if self.loop_mode == "song" and self.current:
             pass
@@ -161,7 +177,7 @@ class GuildMusicPlayer:
         if self.current:
             import time
             self.started_at = time.time()
-            logger.info(f"[Music] Chuẩn bị phát: '{self.current.title}' (Stream URL: {self.current.stream_url[:50]}...)")
+            logger.info(f"[Music] Chuẩn bị phát: '{self.current.title}'")
             try:
                 audio_source = discord.FFmpegPCMAudio(self.current.stream_url, **FFMPEG_OPTIONS)
                 volume_source = discord.PCMVolumeTransformer(audio_source, volume=self.volume)
@@ -193,6 +209,13 @@ class GuildMusicPlayer:
             self.disconnect_task = self.bot.loop.create_task(self._auto_disconnect_countdown(180))
 
     async def _after_song(self):
+        if not self.queue and self.autoplay and self.current and self.loop_mode == 'off':
+            last_title = self.current.title
+            next_song = await self.fetch_ai_next_song(last_title)
+            if next_song:
+                self.queue.append(next_song)
+                if self.text_channel:
+                    await self.text_channel.send(f"📻 **[AI DJ Autoplay]** Tự động nối bài tiếp theo: **{next_song.title}**")
         self.play_next()
 
     async def _auto_disconnect_countdown(self, seconds: int):
@@ -219,6 +242,7 @@ class GuildMusicPlayer:
         embed.add_field(name="⏱️ Thời lượng", value=f"`{dur_str}`", inline=True)
         embed.add_field(name="🔊 Âm lượng", value=f"`{int(self.volume * 100)}%`", inline=True)
         embed.add_field(name="🔁 Lặp", value=f"`{self.loop_mode.upper()}`", inline=True)
+        embed.add_field(name="📻 Tự đổi bài", value=f"`{'BẬT' if self.autoplay else 'TẮT'}`", inline=True)
         embed.add_field(name="👑 Yêu cầu bởi", value=self.current.requester.mention, inline=True)
 
         if self.queue:
@@ -305,6 +329,12 @@ class MusicControlView(discord.ui.View):
         self.player.loop_mode = modes[idx]
         mode_names = {"off": "TẮT", "song": "LẶP 1 BÀI 🔂", "queue": "LẶP HÀNG ĐỢI 🔃"}
         await interaction.response.send_message(f"🔁 Chế độ lặp: **{mode_names[self.player.loop_mode]}**", ephemeral=True)
+
+    @discord.ui.button(emoji="📻", style=discord.ButtonStyle.secondary, custom_id="btn_autoplay")
+    async def btn_autoplay(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.player.autoplay = not self.player.autoplay
+        st = "BẬT 🟢 (Tự tìm bài nối tiếp)" if self.player.autoplay else "TẮT 🔴"
+        await interaction.response.send_message(f"📻 Chế độ Autoplay: **{st}**", ephemeral=True)
 
     @discord.ui.button(emoji="📜", style=discord.ButtonStyle.secondary, custom_id="btn_queue")
     async def btn_queue(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -425,6 +455,16 @@ class MusicCog(commands.Cog, name="Music"):
         await player.stop()
         await interaction.response.send_message("⏹️ **Đã dừng phát nhạc, xóa hàng đợi và rời kênh Voice!**")
 
+    @app_commands.command(name="autoplay", description="📻 Bật/Tắt chế độ tự động nối bài khi hết hàng đợi")
+    async def autoplay_command(self, interaction: discord.Interaction):
+        if not self._check_owner(interaction):
+            await interaction.response.send_message("⛔ Lệnh chỉ dành riêng cho anh Khang!", ephemeral=True)
+            return
+        player = get_player(self.bot, interaction.guild)
+        player.autoplay = not player.autoplay
+        st = "BẬT 🟢 (Tự động đề xuất & phát tiếp liên tục)" if player.autoplay else "TẮT 🔴"
+        await interaction.response.send_message(f"📻 Chế độ AI Autoplay: **{st}**")
+
     @app_commands.command(name="queue", description="📜 Xem danh sách bài hát đang chờ phát")
     async def queue_command(self, interaction: discord.Interaction):
         if not self._check_owner(interaction):
@@ -470,6 +510,7 @@ class MusicCog(commands.Cog, name="Music"):
             embed.set_thumbnail(url=player.current.thumbnail)
         embed.add_field(name="🔊 Âm lượng", value=f"`{int(player.volume * 100)}%`", inline=True)
         embed.add_field(name="🔁 Lặp", value=f"`{player.loop_mode.upper()}`", inline=True)
+        embed.add_field(name="📻 Tự đổi bài", value=f"`{'BẬT' if player.autoplay else 'TẮT'}`", inline=True)
         embed.add_field(name="👑 Yêu cầu bởi", value=player.current.requester.mention, inline=True)
         view = MusicControlView(player)
         await interaction.response.send_message(embed=embed, view=view)
@@ -517,4 +558,4 @@ class MusicCog(commands.Cog, name="Music"):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MusicCog(bot))
-    logger.info("[Music] Đã nạp thành công MusicCog với khóa bảo mật độc quyền!")
+    logger.info("[Music] Đã nạp thành công MusicCog với Autoplay & khóa bảo mật độc quyền!")

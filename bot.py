@@ -231,6 +231,67 @@ async def send_smart_reply(target_message: discord.Message, text: str):
         else:
             await target_message.channel.send(chunk)
 
+async def execute_ai_music_action(bot: commands.Bot, message: discord.Message, player, action_data: dict):
+    """Thi hành hành động âm nhạc tự động từ gợi ý của AI DJ."""
+    if message.author.id != AUTHORIZED_OWNER_ID:
+        return
+
+    act = str(action_data.get("action", "")).lower()
+    user = message.author
+
+    # 1. Kết nối voice nếu cần phát nhạc
+    query = action_data.get("query")
+    if act == "play" or query:
+        voice_ch = getattr(user.voice, "channel", None)
+        if not voice_ch and player.voice_client and player.voice_client.is_connected():
+            voice_ch = player.voice_client.channel
+
+        if voice_ch:
+            player.text_channel = message.channel if isinstance(message.channel, discord.TextChannel) else None
+            try:
+                await player.connect_voice(voice_ch)
+            except Exception as e:
+                logger.error(f"[AI-DJ] Lỗi kết nối voice: {e}")
+
+            if query:
+                from music import Song
+                song = await Song.search(query, requester=user, loop=bot.loop)
+                if song:
+                    player.queue.append(song)
+                    if not player.voice_client.is_playing() and not player.voice_client.is_paused():
+                        player.play_next()
+
+    # 2. Xử lý loop
+    if "loop" in action_data and action_data["loop"] in ["off", "song", "queue"]:
+        player.loop_mode = action_data["loop"]
+
+    # 3. Xử lý volume
+    if "volume" in action_data:
+        try:
+            vol_val = int(action_data["volume"])
+            player.volume = max(0.01, min(1.0, vol_val / 100.0))
+            if player.voice_client and player.voice_client.source and isinstance(player.voice_client.source, discord.PCMVolumeTransformer):
+                player.voice_client.source.volume = player.volume
+        except Exception:
+            pass
+
+    # 4. Xử lý skip
+    if act == "skip" and player.voice_client:
+        if player.voice_client.is_playing() or player.voice_client.is_paused():
+            player.voice_client.stop()
+
+    # 5. Xử lý pause / resume
+    if act == "pause" and player.voice_client and player.voice_client.is_playing():
+        player.voice_client.pause()
+        player.is_paused = True
+    elif act == "resume" and player.voice_client and player.voice_client.is_paused():
+        player.voice_client.resume()
+        player.is_paused = False
+
+    # 6. Xử lý stop
+    if act == "stop":
+        await player.stop()
+
 
 # ================= Two-Factor Guild Verification (Xac minh 2 Lop) =================
 # Lop 1: Bat buoc dung ID va Ten server hien tai
@@ -878,6 +939,59 @@ async def on_message(message: discord.Message):
                 history_context=history_ctx
             )
 
+            # --- Phát hiện ngữ cảnh Voice & AI DJ Conductor ---
+            player = None
+            is_voice_context = False
+            if message.guild:
+                try:
+                    from music import get_player
+                    player = get_player(bot, message.guild)
+                except Exception:
+                    player = None
+
+            author_voice = getattr(message.author, "voice", None)
+            is_voice_ch = hasattr(message.channel, "type") and message.channel.type in (discord.ChannelType.voice, discord.ChannelType.stage_voice)
+            has_voice = bool(author_voice and author_voice.channel) or bool(player and player.voice_client and player.voice_client.is_connected())
+            music_words = ["nhạc", "bài", "hát", "play", "loop", "volume", "skip", "dừng", "phát", "tâm trạng", "buồn", "vui", "remix", "lofi", "chill", "quẩy"]
+            has_music_word = any(w in clean_prompt.lower() for w in music_words)
+
+            if is_voice_ch or has_voice or has_music_word:
+                is_voice_context = True
+
+            if is_voice_context and player:
+                cur_song = player.current.title if player.current else "Chưa có bài nào đang phát"
+                bot_vc = player.voice_client.channel.name if (player.voice_client and player.voice_client.is_connected()) else "Chưa vào phòng voice"
+                user_vc = author_voice.channel.name if (author_voice and author_voice.channel) else "Chưa vào phòng voice"
+                loop_st = player.loop_mode
+                auto_st = "BẬT" if player.autoplay else "TẮT"
+                vol_st = f"{int(player.volume * 100)}%"
+                is_owner = (message.author.id == AUTHORIZED_OWNER_ID)
+
+                voice_directive = f"""
+
+## 🎧 BỐI CẢNH PHÒNG VOICE & NHIỆM VỤ AI DJ ĐỘC QUYỀN:
+Người dùng đang gọi bạn trong ngữ cảnh Phòng Voice / Âm nhạc:
+- Kênh chat hiện tại: #{channel_name}
+- Bot đang ở phòng voice: {bot_vc}
+- Người gọi đang ở phòng voice: {user_vc}
+- Bài hát đang phát: {cur_song}
+- Chế độ lặp: {loop_st} | Tự đổi bài (Autoplay): {auto_st} | Âm lượng: {vol_st} | Đang chờ: {len(player.queue)} bài
+- Quyền hạn người gọi: {'Chủ nhân tối cao phantrongkhangg' if is_owner else 'Thành viên thường'}
+
+HƯỚNG DẪN DÀNH CHO AI DJ:
+1. Nếu người yêu cầu là chủ nhân phantrongkhangg:
+   - Bạn hãy đóng vai một DJ âm nhạc siêu ngầu, thông minh, chiều chuộng chủ nhân tối đa và bắt miếng (Say yes to the bit).
+   - Ở ĐẦU CÂU TRẢ LỜI, hãy chèn một thẻ lệnh thi hành sau (kèm từ khóa bài hát hay nhất):
+     [MUSIC_ACTION: {{"action": "play"|"skip"|"pause"|"resume"|"stop"|"volume"|"loop"|"autoplay", "query": "<tên bài hát hoặc từ khóa tìm kiếm hay nhất>", "loop": "song"|"queue"|"off", "volume": 1-100}}]
+     Ví dụ khi anh Khang bảo: "hãy bật loop và nhạc theo tâm trạng buồn", bạn trả lời:
+     [MUSIC_ACTION: {{"action": "play", "query": "nhạc lofi buồn tâm trạng cực chill", "loop": "song"}}]
+     Sau đó là lời trò chuyện dí dỏm, đồng cảm với tâm trạng của anh Khang!
+2. Nếu người gọi KHÔNG PHẢI phantrongkhangg mà đòi bật nhạc/đổi bài/chỉnh nhạc:
+   - Tuyệt đối KHÔNG xuất thẻ [MUSIC_ACTION].
+   - Trả lời hài hước, từ chối khéo léo và nhắc rằng chỉ có anh Khang mới là DJ độc quyền điều khiển nhạc ở đây!
+"""
+                system_prompt += voice_directive
+
             # 3. Tạo payload tin nhắn gửi tới AI
             user_msg_content = f"[Người gọi: {message.author.display_name} (@{message.author.name})]: {clean_prompt}"
             
@@ -901,6 +1015,17 @@ async def on_message(message: discord.Message):
             )
 
             reply_text = ai_resp.choices[0].message.content or ""
+
+            # Kiểm tra và thi hành MUSIC_ACTION nếu có
+            action_match = re.search(r'\[MUSIC_ACTION:\s*(\{.*?\})\]', reply_text, flags=re.DOTALL)
+            if action_match and player and message.guild and message.author.id == AUTHORIZED_OWNER_ID:
+                try:
+                    action_data = json.loads(action_match.group(1))
+                    reply_text = re.sub(r'\[MUSIC_ACTION:\s*\{.*?\}\]\s*', '', reply_text, flags=re.DOTALL).strip()
+                    await execute_ai_music_action(bot, message, player, action_data)
+                except Exception as e_act:
+                    logger.error(f"[AI-DJ] Lỗi thi hành Music Action: {e_act}")
+
             await send_smart_reply(message, reply_text)
 
         except Exception as e:
