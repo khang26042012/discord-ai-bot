@@ -241,7 +241,7 @@ async def execute_ai_music_action(bot: commands.Bot, message: discord.Message, p
 
     # 1. Kết nối voice nếu cần phát nhạc
     query = action_data.get("query")
-    if act == "play" or query:
+    if act in ("play", "radio") or query:
         voice_ch = getattr(user.voice, "channel", None)
         if not voice_ch and player.voice_client and player.voice_client.is_connected():
             voice_ch = player.voice_client.channel
@@ -261,9 +261,17 @@ async def execute_ai_music_action(bot: commands.Bot, message: discord.Message, p
                     if not player.voice_client.is_playing() and not player.voice_client.is_paused():
                         player.play_next()
 
-    # 2. Xử lý loop
-    if "loop" in action_data and action_data["loop"] in ["off", "song", "queue"]:
+    # 2. Xử lý Radio vs Loop
+    if act == "radio":
+        player.autoplay = True
+        player.loop_mode = "off"
+    elif "loop" in action_data and action_data["loop"] in ["off", "song", "queue"]:
         player.loop_mode = action_data["loop"]
+        if player.loop_mode == "song":
+            player.autoplay = False
+    elif act == "play":
+        player.autoplay = True
+        player.loop_mode = "off"
 
     # 3. Xử lý volume
     if "volume" in action_data:
@@ -981,11 +989,14 @@ Người dùng đang gọi bạn trong ngữ cảnh Phòng Voice / Âm nhạc:
 HƯỚNG DẪN DÀNH CHO AI DJ:
 1. Nếu người yêu cầu là chủ nhân phantrongkhangg:
    - Bạn hãy đóng vai một DJ âm nhạc siêu ngầu, thông minh, chiều chuộng chủ nhân tối đa và bắt miếng (Say yes to the bit).
-   - Ở ĐẦU CÂU TRẢ LỜI, hãy chèn một thẻ lệnh thi hành sau (kèm từ khóa bài hát hay nhất):
-     [MUSIC_ACTION: {{"action": "play"|"skip"|"pause"|"resume"|"stop"|"volume"|"loop"|"autoplay", "query": "<tên bài hát hoặc từ khóa tìm kiếm hay nhất>", "loop": "song"|"queue"|"off", "volume": 1-100}}]
-     Ví dụ khi anh Khang bảo: "hãy bật loop và nhạc theo tâm trạng buồn", bạn trả lời:
-     [MUSIC_ACTION: {{"action": "play", "query": "nhạc lofi buồn tâm trạng cực chill", "loop": "song"}}]
-     Sau đó là lời trò chuyện dí dỏm, đồng cảm với tâm trạng của anh Khang!
+   - QUY TẮC ĐỔI BÀI LIÊN TỤC (RADIO) VS LẶP 1 BÀI:
+     + Khi anh Khang yêu cầu bật nhạc theo tâm trạng (buồn, vui, chill, vinahouse, lofi...), hoặc bảo "bật loop nhạc tâm trạng...", anh ấy muốn nghe nhạc tự động đổi bài liên tục (ĐÀI RADIO):
+       -> BẮT BUỘC đặt action="radio", loop="off" để bot tự động chuyển sang các bài hát mới tương đồng khi hết bài!
+       Ví dụ khi anh Khang bảo: "hãy bật loop và nhạc theo tâm trạng buồn", bạn trả lời:
+       [MUSIC_ACTION: {{"action": "radio", "query": "nhạc lofi buồn tâm trạng suy ngẫm", "loop": "off"}}]
+       Sau đó là lời trò chuyện dí dỏm, đồng cảm với tâm trạng của anh Khang!
+     + CHỈ KHI anh Khang nói rõ là "lặp lại đúng 1 bài này", "replay bài này thôi", "chỉ nghe đúng bài này":
+       -> Lúc đó mới đặt action="play", loop="song".
 2. Nếu người gọi KHÔNG PHẢI phantrongkhangg mà đòi bật nhạc/đổi bài/chỉnh nhạc:
    - Tuyệt đối KHÔNG xuất thẻ [MUSIC_ACTION].
    - Trả lời hài hước, từ chối khéo léo và nhắc rằng chỉ có anh Khang mới là DJ độc quyền điều khiển nhạc ở đây!

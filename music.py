@@ -131,6 +131,7 @@ class GuildMusicPlayer:
         self.is_paused: bool = False
         self.loop_mode: str = "off"
         self.autoplay: bool = True  # Tự động gợi ý & nối bài khi hết queue
+        self.history: List[str] = []  # Lịch sử các bài đã phát để chống trùng lặp
         self.text_channel: Optional[discord.TextChannel] = None
         self.disconnect_task: Optional[asyncio.Task] = None
         self.now_playing_msg: Optional[discord.Message] = None
@@ -154,15 +155,16 @@ class GuildMusicPlayer:
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=os.getenv("ROUTER_API_KEY", "sk-c276eac9b4322b74-tyrxri-1fc67c68"), base_url=os.getenv("ROUTER_BASE_URL", "http://nvnmc.asia:26627/v1"))
-            prompt = f"Bài hát vừa phát là: '{current_title}'. Dựa vào phong cách, ca sĩ, giai điệu và thể loại của bài này, hãy gợi ý ĐÚNG 1 TÊN BÀI HÁT tiếp theo để phát nối tiếp (ngắn gọn chỉ trả về tên bài hát và ca sĩ/remix, không có lời dẫn hay dấu ngoặc kép). "
+            hist_str = ", ".join(self.history[-5:]) if self.history else current_title
+            prompt = f"Các bài hát vừa nghe gần đây: {hist_str}. Bài gần nhất là: '{current_title}'. Dựa vào phong cách, ca sĩ, giai điệu và thể loại của các bài trên, hãy gợi ý ĐÚNG 1 BÀI HÁT tiếp theo để phát nối tiếp (cùng gu nhưng KHÔNG ĐƯỢC TRÙNG với các bài trên, ngắn gọn chỉ trả về đúng tên bài hát và ca sĩ/remix, không có lời dẫn hay dấu ngoặc kép)."
             resp = await client.chat.completions.create(model=os.getenv("ROUTER_MODEL", "ag/gemini-3.8-flash-low"), messages=[{"role": "user", "content": prompt}], max_tokens=60)
             suggested = resp.choices[0].message.content.strip().replace('"', "").replace("'", "")
             if suggested:
-                logger.info(f"[Autoplay] AI đề xuất bài tiếp theo: {suggested}")
+                logger.info(f"[Radio] AI đề xuất bài tiếp theo: {suggested}")
                 song = await Song.search(suggested, requester=self.bot.user, loop=self.bot.loop)
                 return song
         except Exception as e:
-            logger.error(f"[Autoplay] Lỗi gọi AI gợi ý bài: {e}")
+            logger.error(f"[Radio] Lỗi gọi AI gợi ý bài: {e}")
         return None
 
     def play_next(self):
@@ -177,6 +179,9 @@ class GuildMusicPlayer:
         if self.current:
             import time
             self.started_at = time.time()
+            if self.current.title not in self.history:
+                self.history.append(self.current.title)
+                self.history = self.history[-15:]
             logger.info(f"[Music] Chuẩn bị phát: '{self.current.title}'")
             try:
                 audio_source = discord.FFmpegPCMAudio(self.current.stream_url, **FFMPEG_OPTIONS)
@@ -209,13 +214,13 @@ class GuildMusicPlayer:
             self.disconnect_task = self.bot.loop.create_task(self._auto_disconnect_countdown(180))
 
     async def _after_song(self):
-        if not self.queue and self.autoplay and self.current and self.loop_mode == 'off':
+        if not self.queue and self.autoplay and self.current and self.loop_mode != 'song':
             last_title = self.current.title
             next_song = await self.fetch_ai_next_song(last_title)
             if next_song:
                 self.queue.append(next_song)
                 if self.text_channel:
-                    await self.text_channel.send(f"📻 **[AI DJ Autoplay]** Tự động nối bài tiếp theo: **{next_song.title}**")
+                    await self.text_channel.send(f"📻 **[AI Radio]** Tự động đổi sang bài tiếp theo: **{next_song.title}**")
         self.play_next()
 
     async def _auto_disconnect_countdown(self, seconds: int):
@@ -464,6 +469,49 @@ class MusicCog(commands.Cog, name="Music"):
         player.autoplay = not player.autoplay
         st = "BẬT 🟢 (Tự động đề xuất & phát tiếp liên tục)" if player.autoplay else "TẮT 🔴"
         await interaction.response.send_message(f"📻 Chế độ AI Autoplay: **{st}**")
+
+    @app_commands.command(name="radio", description="📻 Bật đài Radio AI: Tự động đổi bài liên tục theo tâm trạng/gu nhạc xuyên đêm")
+    @app_commands.describe(query="Tâm trạng (buồn, vui, chill, vinahouse, lofi...) hoặc tên bài hát mở đầu")
+    async def radio_command(self, interaction: discord.Interaction, query: Optional[str] = None):
+        if not self._check_owner(interaction):
+            await interaction.response.send_message("⛔ Lệnh chỉ dành riêng cho anh Khang (@khangmc_vn)!", ephemeral=True)
+            return
+        if not interaction.guild:
+            await interaction.response.send_message("❌ Lệnh này chỉ dùng được trong server!", ephemeral=True)
+            return
+        user = interaction.user
+        if not isinstance(user, discord.Member) or not user.voice or not user.voice.channel:
+            await interaction.response.send_message("⚠️ Anh cần tham gia vào một phòng Voice trước nha!", ephemeral=True)
+            return
+        voice_channel = user.voice.channel
+        await interaction.response.defer(thinking=True)
+        player = get_player(self.bot, interaction.guild)
+        player.text_channel = interaction.channel if isinstance(interaction.channel, discord.TextChannel) else None
+        player.autoplay = True
+        player.loop_mode = "off"
+        try:
+            await player.connect_voice(voice_channel)
+        except Exception as e:
+            logger.error(f"[Music] Lỗi kết nối Voice: {e}")
+            await interaction.followup.send(f"❌ Không thể kết nối vào kênh Voice: {e}")
+            return
+        target_query = query
+        if not target_query:
+            if player.current:
+                await interaction.followup.send(f"📻 **Đã bật Chế độ Radio AI!** Bot sẽ tự động đổi bài tương tự sau khi bài **{player.current.title}** kết thúc.")
+                return
+            else:
+                target_query = "nhạc lofi chill suy ngẫm"
+        song = await Song.search(target_query, requester=user, loop=self.bot.loop)
+        if not song:
+            await interaction.followup.send(f"❌ Không tìm thấy bài hát nào cho: {target_query}")
+            return
+        player.queue.append(song)
+        if not player.voice_client.is_playing() and not player.voice_client.is_paused():
+            player.play_next()
+            await interaction.followup.send(f"📻 **Đã kích hoạt Đài Radio AI!**\n🎶 **Bắt đầu với:** [{song.title}]({song.webpage_url})\n*(Bot sẽ tự động đề xuất và đổi bài liên tục theo gu xuyên đêm)*")
+        else:
+            await interaction.followup.send(f"📻 **Đã kích hoạt Đài Radio AI!** Bài [{song.title}]({song.webpage_url}) đã được xếp vào hàng đợi.")
 
     @app_commands.command(name="queue", description="📜 Xem danh sách bài hát đang chờ phát")
     async def queue_command(self, interaction: discord.Interaction):
