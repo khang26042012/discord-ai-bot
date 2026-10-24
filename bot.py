@@ -80,10 +80,10 @@ _server_stats_lock = asyncio.Lock()
 _ws_connections: set = set()  # Active WebSocket connections from MC servers
 
 # ================= AI Client Configuration =================
-# Cấu hình Gateway NVNMC Gemini Flash High (ag/gemini-3.8-flash-high)
+# Cấu hình Gateway NVNMC Gemini Flash Low (ag/gemini-3.8-flash-low - mức thinking thấp)
 ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-c276eac9b4322b74-tyrxri-1fc67c68")
 ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "http://nvnmc.asia:26627/v1")
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "ag/gemini-3.8-flash-high")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "ag/gemini-3.8-flash-low")
 
 XKIRO_API_KEY = ROUTER_API_KEY
 XKIRO_BASE_URL = ROUTER_BASE_URL
