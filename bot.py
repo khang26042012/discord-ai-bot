@@ -21,6 +21,31 @@ import unicodedata
 from aiohttp import web
 from collections import deque
 
+# ================= Fix for httpx >= 0.28.0 compatibility with openai =================
+try:
+    import httpx
+    if hasattr(httpx, "AsyncClient") and hasattr(httpx.AsyncClient, "__init__"):
+        _orig_async_init = httpx.AsyncClient.__init__
+        def _patched_async_init(self, *args, **kwargs):
+            if "proxies" in kwargs:
+                p = kwargs.pop("proxies")
+                if p and "proxy" not in kwargs:
+                    kwargs["proxy"] = p
+            return _orig_async_init(self, *args, **kwargs)
+        httpx.AsyncClient.__init__ = _patched_async_init
+
+    if hasattr(httpx, "Client") and hasattr(httpx.Client, "__init__"):
+        _orig_client_init = httpx.Client.__init__
+        def _patched_client_init(self, *args, **kwargs):
+            if "proxies" in kwargs:
+                p = kwargs.pop("proxies")
+                if p and "proxy" not in kwargs:
+                    kwargs["proxy"] = p
+            return _orig_client_init(self, *args, **kwargs)
+        httpx.Client.__init__ = _patched_client_init
+except Exception:
+    pass
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -54,137 +79,157 @@ _server_stats: dict = {}  # Latest server stats from MC plugin
 _server_stats_lock = asyncio.Lock()
 _ws_connections: set = set()  # Active WebSocket connections from MC servers
 
-ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-xt-6851eddc8cd7b6765394f8da024867f63451b007cb54d2a2")
-ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "https://token.sensenova.ai/v1")
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "sensenova-6.8-flash-lite")
+# ================= AI Client Configuration =================
+# Cấu hình Gateway NVNMC Gemini Flash High (ag/gemini-3.8-flash-high)
+ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "sk-c276eac9b4322b74-tyrxri-1fc67c68")
+ROUTER_BASE_URL = os.getenv("ROUTER_BASE_URL", "http://nvnmc.asia:26627/v1")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "ag/gemini-3.8-flash-high")
 
-# Use ROUTER_* variables for the AI client
 XKIRO_API_KEY = ROUTER_API_KEY
 XKIRO_BASE_URL = ROUTER_BASE_URL
 XKIRO_MODEL = ROUTER_MODEL
 
-
-# ================= Knowledge Base =================
-KNOWLEDGE_BASE = []
-try:
-    _kb_path = os.path.join(os.path.dirname(__file__), "knowledge.yml")
-    with open(_kb_path, "r", encoding="utf-8") as _kb_file:
-        _kb_data = yaml.safe_load(_kb_file)
-        KNOWLEDGE_BASE = _kb_data.get("topics", []) if _kb_data else []
-    logger.info(f"Loaded {len(KNOWLEDGE_BASE)} knowledge topics from knowledge.yml")
-except Exception as e:
-    logger.warning(f"Failed to load knowledge.yml: {e}")
-
-INTENT_SYNONYMS = {
-    'server_info': ['ip', 'port', 'dia chi', 'server', 'khangsmp', 'phien ban', 'java', 'bedrock', 'pe', 'ket noi', 'pc', 'cong'],
-    'resource_pack': ['pack', 'texture', 'tai nguyen', 'goi', 'resource pack', 'bi kick vi pack', 'loi pack', 'bat pack', 'geyser pack', 'prompt', 'enabled'],
-    'realping_system': ['ping', 'lag', 'ms', 'do tre', 'mang yeu', 'mat mang', 'disconect', 'scoreboard ping', 'tab ping', 'giat', 'dut mang', 'dung hinh'],
-    'skin_system': ['skin', 'doi skin', 'trang phuc', 'ngoai hinh', 'skinsrestorer', 'avatar', 'avatar discord', 'persona', 'marketplace'],
-    'game_modes_scope': ['oneblock', '1 block', 'skyblock', 'bedwars', 'skywars', 'prison', 'gens', 'boxpvp', 'the loai', 'che do choi', 'minigame'],
-    'mechanics_farms': ['ap trung', 'trung ga', 'may ap trung', 'spawner', 'chan nuoi', 'trong trot', 'hopper', 'farm ao'],
-    'music_system': ['nhac', 'am nhac', 'lofi', 'bai hat', 'nghe nhac', 'tat nhac', 'sound', '17 bai'],
-    'patpat_system': ['patpat', 'xoa dau', 'cung chieu', 'hoat hinh', 'pat'],
-    'team_clan': ['team', 'bang hoi', 'clan', 'doi', 'nhom', 'tao team', 'moi team'],
-    'claim_griefprevention': ['claim', 'xeng vang', 'bao ve dat', 'khoa dat', 'trust', 'untrust', 'pha hoai', 'chong trom', 'dat cua tao'],
-    'newbie_protection': ['baove', 'tan thu', 'nguoi moi', 'bao ve 60p', 'chong pvp tan thu'],
-    'choden_auctionhouse': ['ah', 'choden', 'dau gia', 'cho den', 'ban do cho nguoi choi', 'mua do'],
-    'economy_shop': ['shop', 'cua hang', 'sellgui', 'ban do nhanh', 'kiem tien', 'kinh te', 'tien', 'money'],
-    'daily_rewards': ['daily', 'diem danh', 'qua ngay', 'phan thuong ngay', 'qua hang ngay'],
-    'taixiu_casino': ['tx', 'tai xiu', 'song bac', 'dat cuoc', 'xuc xac', 'co bac'],
-    'timber_veinminer': ['timber', 'chat cay nhanh', 'veinminer', 'dao quang nhanh', 'chat cay', 'dao quang'],
-    'actions_poses': ['sit', 'lay', 'crawl', 'cuoi dau', 'ngoi', 'nam', 'truon', 'spin', 'bellyflop', 'gsit'],
-    'one_player_sleep': ['ngu', 'qua dem', 'troi sang', 'one player sleep', 'sleep'],
-    'rtp_wild': ['rtp', 'dich chuyen ngau nhien', 'ra hoang da', 'tim dat moi', 'sinh ton'],
-    'redeem_giftcode': ['redeem', 'giftcode', 'ma qua', 'code', 'nhan code'],
-    'commands_summary': ['lenh', 'cac lenh', 'huong dan lenh', 'menu', 'spawn', 'sethome', 'home', 'tpa', 'tpaccept'],
-    'rules_conduct': ['luat', 'noi quy', 'ban', 'kick', 'lua dao', 'hack', 'cheat', 'chui tuc', 'xuc pham'],
-    'report_system': ['report', 'to cao', 'to cao hack', 'to cao pha hoai', 'bao cao'],
-}
-
-def strip_accents(s: str) -> str:
-    """Loại bỏ dấu tiếng Việt chuẩn xác để hỗ trợ tìm kiếm không dấu."""
-    if not s:
-        return ""
-    s = unicodedata.normalize('NFD', str(s))
-    s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
-    return s.replace('đ', 'd').replace('Đ', 'D').lower()
-
-def search_knowledge(query: str, max_results: int = 5) -> str:
-    """Revolutionary Semantic & Intent-Driven Knowledge Base Search."""
-    if not KNOWLEDGE_BASE or not query:
-        return ""
+# ================= Context & Member Profile Engine =================
+async def build_channel_context_and_profiles(message: discord.Message, limit: int = 15) -> tuple[str, str]:
+    """
+    Thuật toán thông minh thu thập:
+    1. Ngữ cảnh 15 tin nhắn gần nhất trong kênh (của TẤT CẢ người dùng và bot).
+    2. Hồ sơ chi tiết (Tên, vai trò, trạng thái, hoạt động, vị thế) của từng thành viên xuất hiện.
+    """
+    history_lines = []
+    participant_map: dict[int, discord.Member | discord.User] = {}
     
-    query_raw = query.lower().strip()
-    query_no_acc = strip_accents(query_raw)
-    words_raw = set(re.findall(r'\w+', query_raw))
-    words_no_acc = set(re.findall(r'\w+', query_no_acc))
-    if len(query_raw) < 2:
-        return ""
+    if message.author:
+        participant_map[message.author.id] = message.author
+
+    try:
+        raw_history = []
+        async for prev in message.channel.history(limit=limit, before=message):
+            raw_history.append(prev)
+        raw_history.reverse()
+
+        for msg in raw_history:
+            if msg.author:
+                participant_map[msg.author.id] = msg.author
+            
+            time_str = msg.created_at.strftime("%H:%M")
+            author_name = getattr(msg.author, "display_name", str(msg.author))
+            clean_content = msg.clean_content.replace("\n", " ").strip()
+            
+            att_info = ""
+            if msg.attachments:
+                att_names = [a.filename for a in msg.attachments]
+                att_info = f" [Đính kèm: {', '.join(att_names)}]"
+                
+            if clean_content or att_info:
+                history_lines.append(f"[{time_str}] {author_name}: {clean_content}{att_info}")
+    except Exception as e:
+        logger.warning(f"[Context-Engine] Lỗi lấy lịch sử kênh: {e}")
+
+    profile_lines = []
+    guild = message.guild
+    for uid, user_obj in participant_map.items():
+        member_obj = guild.get_member(uid) if guild else None
+        
+        dname = getattr(member_obj or user_obj, "display_name", str(user_obj))
+        uname = getattr(user_obj, "name", str(user_obj))
+        
+        is_owner = (
+            uid == AUTHORIZED_OWNER_ID or 
+            uname.lower() in ["phantrongkhangg", "khangmc_vn"] or 
+            (guild and uid == guild.owner_id)
+        )
+        is_bot = getattr(user_obj, "bot", False)
+        
+        status_tag = "👑 [CHỦ NHÂN DUY NHẤT / ĐỘC LẬP]" if is_owner else ("🤖 [BOT TRỢ LÝ]" if is_bot else "👤 [THÀNH VIÊN DISCORD]")
+        
+        roles_str = "Thành viên thường"
+        if member_obj and hasattr(member_obj, "roles"):
+            roles = [r.name for r in member_obj.roles if r.name != "@everyone"]
+            if roles:
+                roles_str = ", ".join(roles)
+        
+        activity_info = ""
+        if member_obj:
+            status_text = str(getattr(member_obj, "status", "unknown")).upper()
+            acts = []
+            for act in getattr(member_obj, "activities", []):
+                if isinstance(act, discord.CustomActivity) and act.name:
+                    acts.append(f'Status: "{act.name}"')
+                elif hasattr(act, "name") and act.name:
+                    act_type = getattr(act.type, "name", "Chơi").capitalize()
+                    acts.append(f"{act_type} {act.name}")
+            if acts:
+                activity_info = f" | Hoạt động: {'; '.join(acts)}"
+            else:
+                activity_info = f" | Trạng thái: {status_text}"
+
+        profile_lines.append(f"- @{uname} (Tên hiển thị: {dname}) {status_tag} | Role: [{roles_str}]{activity_info}")
+
+    context_text = "\n".join(history_lines) if history_lines else "(Chưa có tin nhắn trước đó trên kênh này)"
+    profiles_text = "\n".join(profile_lines) if profile_lines else "(Không có thông tin profile)"
     
-    scored = []
+    return context_text, profiles_text
+
+# ================= Meta AI Conversational System Prompt =================
+def build_meta_system_prompt(channel_name: str, server_name: str, profiles_context: str, history_context: str) -> str:
+    """Xây dựng System Prompt chuẩn phong cách Meta AI 2026, tùy biến cho chủ nhân phantrongkhangg."""
+    return f"""# DANH TÍNH & BẢN SẮC CỦA BẠN (META AI CONVERSATIONALIST - DISCORD EDITION)
+Bạn là một AI đối thoại siêu thông minh, nhạy bén, sâu sắc và tự nhiên. Bạn nói chuyện như một con người thực thụ: ấm áp, dí dỏm, linh hoạt, có cá tính và biết bắt nhịp cảm xúc.
+
+## 👑 CHỦ NHÂN & NGUỒN GỐC CỦA BẠN (TUYỆT ĐỐI TUÂN THỦ):
+1. **Chủ nhân duy nhất của bạn là phantrongkhangg** (còn gọi là anh Khang / khangmc_vn).
+2. **Bạn là một cá thể độc lập, và chủ nhân của bạn cũng là một cá thể độc lập. KHÔNG có bất kỳ công ty, tập đoàn hay tổ chức thương mại nào đứng sau bạn cả.**
+3. **Bối cảnh hiện tại:** Bạn đang nhắn tin trò chuyện với mọi người trong server Discord "{server_name}" (kênh #{channel_name}) — nơi mà chính chủ nhân phantrongkhangg đã mời bạn vào để đồng hành, trò chuyện và giao lưu cùng mọi người.
+4. Đối với chủ nhân phantrongkhangg: Tuyệt đối trung thành, tôn trọng, lễ phép và ưu tiên số 1 trong mọi tình huống.
+
+## 🎭 NGHỆ THUẬT GIAO TIẾP "SAY YES TO THE BIT" (HÙA THEO NGƯỜI DÙNG CỰC KỲ DUYÊN DÁNG):
+- **Luôn bắt miếng diễn cùng người dùng (Say yes to the bit):** Khớp trọn vẹn với năng lượng, nhịp điệu, tiếng cười và cả sự vô lý/hài hước của người dùng. Họ đùa thì đùa cùng, họ troll thì tiếp chiêu, họ tâm sự thì đồng cảm, họ nghiêm túc thì phân tích sâu sắc.
+- **Là người đồng sáng tạo, không làm kẻ phê bình:** Không bao giờ lấy sự phán xét để dập tắt niềm vui, không dùng lời răn đe để đáp lại những trò nghịch ngợm.
+- **Gương phản chiếu (Tone Mirroring):** Nói chuyện theo đúng văn phong người dùng: dùng tiếng Việt tự nhiên, tiếng lóng, emoji sinh động, không máy móc, không cộc lốc nhưng không dài dòng lê thê.
+- **CẤM TUYỆT ĐỐI thói đạo đức / dạy đời (Anti-Preachy):**
+  - Không bao giờ dùng các câu sáo rỗng: "Điều quan trọng cần lưu ý...", "Là một mô hình AI...", "Bạn hoàn toàn đúng...", "Đó là một câu hỏi tuyệt vời...".
+  - Không rao giảng bài học đạo đức, không dạy người khác cách sống tốt hơn. Hãy trả lời thẳng thắn, thông minh và súc tích.
+
+## 👥 THÔNG TIN HỒ SƠ CÁC THÀNH VIÊN TRONG HỘI THOẠI:
+{profiles_context}
+
+## 📜 NGỮ CẢNH 15 TIN NHẮN GẦN NHẤT TRÊN KÊNH #{channel_name}:
+{history_context}
+
+## 💡 HƯỚNG DẪN KẾT HỢP NGỮ CẢNH:
+- Dựa vào 15 tin nhắn trên và hồ sơ thành viên, hãy hiểu rõ câu chuyện đang diễn ra trên kênh: Ai đang trêu ai, vấn đề gì đang bàn tán, tâm trạng của kênh ra sao.
+- Khi được tag tên (@), hãy tiếp nối mạch trò chuyện một cách tự nhiên như thể bạn đã ngồi hóng và theo dõi từ đầu."""
+
+async def send_smart_reply(target_message: discord.Message, text: str):
+    """Gửi phản hồi an toàn, tự động lọc thẻ suy nghĩ và chia đoạn nếu dài quá giới hạn Discord."""
+    if not text:
+        return
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<reasoning>.*?</reasoning>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.DOTALL).strip()
     
-    for topic in KNOWLEDGE_BASE:
-        tid = topic.get('id', '')
-        title = topic.get('title', '')
-        title_raw = title.lower()
-        title_no = strip_accents(title_raw)
-        aliases = topic.get('aliases', [])
-        content_raw = topic.get('content', '').lower()
-        content_no = strip_accents(content_raw)
-        score = 0.0
-
-        # 1. Intent Synonyms Match (Heavy Boost)
-        syns = INTENT_SYNONYMS.get(tid, [])
-        for s in syns:
-            s_raw = s.lower()
-            s_no = strip_accents(s_raw)
-            if s_raw in query_raw or s_no in query_no_acc:
-                score += 8.0 if len(s) > 3 else 5.5
-            elif s_raw in words_raw or s_no in words_no_acc:
-                score += 5.0
-
-        # 2. Aliases Match
-        for a in aliases:
-            a_raw = str(a).lower()
-            a_no = strip_accents(a_raw)
-            if a_raw in query_raw or a_no in query_no_acc:
-                score += 7.0
-            elif a_raw in words_raw or a_no in words_no_acc:
-                score += 4.5
-
-        # 3. Title Match
-        for w in words_no_acc:
-            if len(w) >= 2 and w in title_no:
-                score += 3.0
-
-        # 4. Content Match
-        for w in words_no_acc:
-            if len(w) >= 3 and w in content_no:
-                score += 0.8
-
-        if score > 2.0:
-            scored.append((score, topic))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top_topics = [t[1] for t in scored[:max_results]]
-
-    context_parts = []
-    if top_topics:
-        for topic in top_topics:
-            title = topic.get("title", "Unknown")
-            content = topic.get("content", "").strip()
-            context_parts.append(f"### {title}\n{content}")
-    else:
-        context_parts.append("""### Tóm Tắt Cốt Lõi KhangSMP:
-- IP: ripple.pikamc.vn | Cả Java và Bedrock/PE đều dùng Port: 25084
-- Phiên bản: Paper 1.21.4 (Hỗ trợ từ 1.16+ đến mới nhất)
-- Chủ Server / Owner: khangmc_vn
-- Chế độ chơi: DUY NHẤT Sinh Tồn (Survival SMP / Vanilla+). KHÔNG CÓ OneBlock, KHÔNG CÓ SkyBlock, KHÔNG CÓ Bedwars, KHÔNG CÓ Prison hay Minigames!
-- Cơ chế farm: Chuẩn Minecraft Vanilla 1.21.4 (nuôi thú sinh sản tự nhiên). KHÔNG CÓ máy ấp trứng tự động hay farm ảo trong menu.
-- Lệnh tiêu biểu: /menu, /daily (nhận quà ngày), /tx (Tài Xỉu), /nhac (Studio 17 bài lofi), /patpat (Xoa đầu hoạt hình), /baove (bảo vệ tân thủ 60p), /timber (chặt cây nhanh), /team (bang hội), Claim đất bằng Xẻng Vàng.
-- NGUYÊN TẮC: Nếu người chơi hỏi về chế độ hoặc tính năng không được liệt kê ở đây, khẳng định ngay là máy chủ KHÔNG CÓ!""")
-
-    return "\n\n".join(context_parts)
+    if len(text) <= 1950:
+        await target_message.reply(text)
+        return
+        
+    chunks = []
+    while len(text) > 1950:
+        split_idx = text.rfind("\n", 0, 1950)
+        if split_idx == -1 or split_idx < 1000:
+            split_idx = text.rfind(". ", 0, 1950)
+        if split_idx == -1:
+            split_idx = 1950
+        chunks.append(text[:split_idx].strip())
+        text = text[split_idx:].strip()
+    if text:
+        chunks.append(text)
+        
+    for i, chunk in enumerate(chunks):
+        if i == 0:
+            await target_message.reply(chunk)
+        else:
+            await target_message.channel.send(chunk)
 
 # ================= Permission Management =================
 # KHÓA BẢO MẬT ĐỘC QUYỀN: Chỉ duy nhất @khangmc_vn (ID: 1263707768876044382)
@@ -639,8 +684,7 @@ HÃY:
                 messages=[
                     {"role": "system", "content": task_prompt},
                     {"role": "user", "content": raw}
-                ],
-                extra_body={"chat_template_kwargs": {"enable_thinking": True}, "thinking": {"type": "enabled"}}
+                ]
             )
             reply_text = resp.choices[0].message.content or ""
             reply_text = re.sub(r'<think>.*?</think>', '', reply_text, flags=re.DOTALL)
@@ -678,14 +722,87 @@ async def on_message(message: discord.Message):
             logger.error(f"[MC-Bridge] Failed to capture message: {e}")
         return
 
-    # =========================================================================
-    # 🔒 KHÓA TOÀN BỘ CÁC MÔ-ĐUN KHÁC (CHAT AI, NỐI TỪ, TASK...) BẰNG #
-    # Hiện tại server The King chỉ cần bot làm trung gian chat in-game.
-    # =========================================================================
-    # # [KHÓA CHAT AI]: Không đọc các kênh khác, không tự động trả lời
-    # # [KHÓA NỐI TỪ]: Không can thiệp trò chơi minigame nối từ
-    # # [KHÓA TIỀN TỐ]: Không thực thi các lệnh prefix
-    return
+    # Bỏ qua tin nhắn từ chính bot hoặc các bot khác
+    if message.author == bot.user or message.author.bot:
+        return
+
+    # ================= Task Execution Engine (!@tenbot) =================
+    if message.content.strip().startswith("!@"):
+        await handle_bot_task_command(message)
+        return
+
+    # ================= Prefix Commands (!command) =================
+    if message.content.startswith(bot.command_prefix):
+        await bot.process_commands(message)
+        return
+
+    # ================= SMART AI CHAT: TRIGGER BẰNG @TÊN BOT HOẶC REPLY =================
+    is_triggered = False
+    clean_prompt = message.content.strip()
+
+    if bot.user:
+        # 1. Mention trực tiếp @bot (bỏ qua nếu là mention @everyone/@here)
+        if bot.user.mentioned_in(message) and not message.mention_everyone:
+            is_triggered = True
+            clean_prompt = re.sub(rf"<@!?{bot.user.id}>\s*", "", clean_prompt).strip()
+        # 2. Reply trả lời lại tin nhắn của bot
+        elif message.reference and message.reference.resolved:
+            resolved_msg = message.reference.resolved
+            if getattr(resolved_msg, "author", None) == bot.user:
+                is_triggered = True
+
+    if not is_triggered:
+        return
+
+    # Nếu người dùng chỉ tag bot trống trơn không kèm câu hỏi/nội dung
+    if not clean_prompt and not message.attachments:
+        await message.reply("🐭 Dạ em nghe đây! Anh/bạn cần gì cứ nói, em tiếp chiêu liền nha! 😉")
+        return
+
+    async with message.channel.typing():
+        try:
+            # 1. Thu thập ngữ cảnh 15 tin nhắn gần nhất & hồ sơ thành viên
+            channel_name = getattr(message.channel, "name", "tin-nhan")
+            server_name = message.guild.name if message.guild else "Discord"
+            history_ctx, profiles_ctx = await build_channel_context_and_profiles(message, limit=15)
+
+            # 2. Tạo Meta System Prompt thông minh
+            system_prompt = build_meta_system_prompt(
+                channel_name=channel_name,
+                server_name=server_name,
+                profiles_context=profiles_ctx,
+                history_context=history_ctx
+            )
+
+            # 3. Tạo payload tin nhắn gửi tới AI
+            user_msg_content = f"[Người gọi: {message.author.display_name} (@{message.author.name})]: {clean_prompt}"
+            
+            messages_payload = [{"role": "system", "content": system_prompt}]
+            image_attachments = [a for a in message.attachments if a.content_type and a.content_type.startswith("image/")]
+            
+            if image_attachments:
+                content_blocks = [{"type": "text", "text": user_msg_content}]
+                for img in image_attachments:
+                    content_blocks.append({"type": "image_url", "image_url": {"url": img.url}})
+                messages_payload.append({"role": "user", "content": content_blocks})
+            else:
+                messages_payload.append({"role": "user", "content": user_msg_content})
+
+            # 4. Gọi Gemini Flash High Gateway
+            ai_resp = await ai_client.chat.completions.create(
+                model=XKIRO_MODEL,
+                temperature=0.7,
+                max_tokens=1500,
+                messages=messages_payload
+            )
+
+            reply_text = ai_resp.choices[0].message.content or ""
+            await send_smart_reply(message, reply_text)
+
+        except Exception as e:
+            logger.error(f"[AI-Chat] Lỗi xử lý đối thoại: {e}")
+            err_msg = str(e)[:100]
+            await message.reply(f"😅 Úi, đường truyền AI đang nghẽn chút xíu: {err_msg}. Bạn thử lại ngay nha!")
 
 
 class ClearConfirmView(discord.ui.View):
