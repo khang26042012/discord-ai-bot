@@ -161,6 +161,7 @@ class GuildMusicPlayer:
         if self.current:
             import time
             self.started_at = time.time()
+            logger.info(f"[Music] Chuẩn bị phát: '{self.current.title}' (Stream URL: {self.current.stream_url[:50]}...)")
             try:
                 audio_source = discord.FFmpegPCMAudio(self.current.stream_url, **FFMPEG_OPTIONS)
                 volume_source = discord.PCMVolumeTransformer(audio_source, volume=self.volume)
@@ -370,12 +371,11 @@ class MusicCog(commands.Cog, name="Music"):
         if not song:
             await interaction.followup.send(f"❌ Không tìm thấy bài hát nào phù hợp với từ khóa: `{query}`")
             return
+        player.queue.append(song)
         if not player.voice_client.is_playing() and not player.voice_client.is_paused():
-            player.current = song
             player.play_next()
             await interaction.followup.send(f"🎶 **Bắt đầu phát:** [{song.title}]({song.webpage_url}) (`{format_duration(song.duration)}`)")
         else:
-            player.queue.append(song)
             await interaction.followup.send(f"📥 **Đã thêm vào hàng đợi (#{len(player.queue)}):** [{song.title}]({song.webpage_url}) (`{format_duration(song.duration)}`)")
 
     @app_commands.command(name="skip", description="⏭️ Chuyển sang bài hát kế tiếp")
