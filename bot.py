@@ -231,6 +231,81 @@ async def send_smart_reply(target_message: discord.Message, text: str):
         else:
             await target_message.channel.send(chunk)
 
+
+# ================= Two-Factor Guild Verification (Xac minh 2 Lop) =================
+# Lop 1: Bat buoc dung ID va Ten server hien tai
+AUTHORIZED_GUILD_ID = int(os.getenv("AUTHORIZED_GUILD_ID", "1475546596388376658"))
+AUTHORIZED_GUILD_NAME = os.getenv("AUTHORIZED_GUILD_NAME", "The kingdom")
+
+# Lop 2: Bat buoc phai co nguoi ten @khangmc_vn o trong server do
+AUTHORIZED_OWNER_USERNAME = "khangmc_vn"
+AUTHORIZED_OWNER_ID = 1263707768876044382
+
+SECURITY_REJECT_MESSAGE = "@everyone Bạn không có quyền sử dụng bot, vui lòng liên hệ @phantrongkhangg ( tiktok )"
+
+def check_guild_security_layers(guild: discord.Guild) -> tuple[bool, int, str]:
+    if not guild:
+        return False, 1, "Khong co thong tin server (DM hoac None)"
+
+    # --- LOP 1: BAT BUOC DUNG ID VA TEN SERVER ---
+    guild_id_match = (guild.id == AUTHORIZED_GUILD_ID)
+    guild_name_match = (str(guild.name).strip().lower() == AUTHORIZED_GUILD_NAME.strip().lower())
+
+    if not (guild_id_match and guild_name_match):
+        return False, 1, f"Sai ID hoac Ten server: ID={guild.id} (Yeu cau: {AUTHORIZED_GUILD_ID}), Name='{guild.name}' (Yeu cau: '{AUTHORIZED_GUILD_NAME}')"
+
+    # --- LOP 2: BAT BUOC PHAI CO THANH VIEN TEN @khangmc_vn ---
+    has_owner = False
+    for m in guild.members:
+        if m.id == AUTHORIZED_OWNER_ID or str(m.name).lower() == AUTHORIZED_OWNER_USERNAME.lower():
+            has_owner = True
+            break
+
+    if not has_owner:
+        owner_member = guild.get_member(AUTHORIZED_OWNER_ID) or guild.get_member_named(AUTHORIZED_OWNER_USERNAME)
+        if owner_member:
+            has_owner = True
+
+    if not has_owner:
+        return False, 2, f"Khong tim thay nguoi ten @{AUTHORIZED_OWNER_USERNAME} trong server '{guild.name}'"
+
+    return True, 0, "Xac minh 2 lop thanh cong"
+
+async def enforce_guild_security(guild: discord.Guild, target_channel: Optional[discord.TextChannel] = None) -> bool:
+    if not guild:
+        return False
+
+    is_valid, failed_layer, reason = check_guild_security_layers(guild)
+    if is_valid:
+        return True
+
+    logger.warning(f"[Security-Shield] VI PHAM LOP {failed_layer} tai server '{guild.name}' (ID: {guild.id}): {reason}")
+
+    channel_to_notify = target_channel
+    if not channel_to_notify:
+        channel_to_notify = guild.system_channel
+    if not channel_to_notify:
+        for ch in guild.text_channels:
+            perms = ch.permissions_for(guild.me)
+            if perms.send_messages:
+                channel_to_notify = ch
+                break
+
+    if channel_to_notify:
+        try:
+            await channel_to_notify.send(SECURITY_REJECT_MESSAGE)
+            logger.info(f"[Security-Shield] Da ping canh bao toi kenh #{channel_to_notify.name}")
+        except Exception as e:
+            logger.error(f"[Security-Shield] Khong the gui canh bao: {e}")
+
+    try:
+        await guild.leave()
+        logger.info(f"[Security-Shield] Da tu dong roi khoi server trai phep '{guild.name}' (ID: {guild.id})!")
+    except Exception as e:
+        logger.error(f"[Security-Shield] Loi khi roi server '{guild.name}': {e}")
+
+    return False
+
 # ================= Permission Management =================
 # KHÓA BẢO MẬT ĐỘC QUYỀN: Chỉ duy nhất @khangmc_vn (ID: 1263707768876044382)
 # Chặn toàn bộ người dùng khác, chặn luôn cả Owner server Discord!
@@ -308,11 +383,21 @@ PANELS_FILE = "panels.json"
 # Ta sẽ sử dụng decorator cho từng command thay vì on_interaction để tránh xung đột với bot.tree
 # Để đơn giản, ta sẽ thêm một hàm check riêng trong mỗi slash command
 @bot.event
+async def on_guild_join(guild: discord.Guild):
+    logger.info(f"[Security-Shield] Phat hien bot duoc moi vao server moi: '{guild.name}' (ID: {guild.id})")
+    await enforce_guild_security(guild)
+
+@bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
     logger.info("All commands are locked: require Manage Guild or Administrator permission.")
     logger.info(f"Target Channel ID: {ALLOWED_CHANNEL_ID}")
     logger.info(f"Xkiro Model: {XKIRO_MODEL}")
+    # Quet bao mat toan bo server bot dang tham gia khi khoi dong
+    for g in list(bot.guilds):
+        is_ok = await enforce_guild_security(g)
+        if not is_ok:
+            logger.warning(f"[Security-Shield] Da truc xuat bot khoi server trai phep: {g.name}")
     
     # File-based storage (no database needed)
     logger.info("✅ Using JSON file storage (no database)")
@@ -725,6 +810,17 @@ async def on_message(message: discord.Message):
     # Bỏ qua tin nhắn từ chính bot hoặc các bot khác
     if message.author == bot.user or message.author.bot:
         return
+
+    # ================= BẢO MẬT 2 LỚP XÁC MINH SERVER =================
+    if message.guild:
+        is_valid = await enforce_guild_security(message.guild, target_channel=message.channel if isinstance(message.channel, discord.TextChannel) else None)
+        if not is_valid:
+            return
+    else:
+        # Nếu là tin nhắn trực tiếp (DM)
+        if message.author.id != AUTHORIZED_OWNER_ID:
+            await message.reply("⛔ Bạn không có quyền sử dụng bot, vui lòng liên hệ @phantrongkhangg ( tiktok )")
+            return
 
     # ================= Task Execution Engine (!@tenbot) =================
     if message.content.strip().startswith("!@"):
@@ -2252,24 +2348,8 @@ async def reload_cmd(interaction: discord.Interaction):
 
 
 async def main():
-    staff_token = os.getenv("STAFF_BOT_TOKEN")
-    if not staff_token:
-        staff_token_path = os.path.expanduser("~/.credentials/discord_staff_bot.token")
-        if os.path.exists(staff_token_path):
-            with open(staff_token_path, "r", encoding="utf-8") as f:
-                staff_token = f.read().strip()
-
-    tasks = [bot.start(TOKEN)]
-    if staff_token:
-        try:
-            from staff_bot import staff_bot
-            logger.info("[MAIN] Khoi chay Staff Bot song song thanh cong!")
-            tasks.append(staff_bot.start(staff_token))
-        except Exception as e:
-            logger.error(f"[MAIN] Khoi dong Staff Bot that bai: {e}")
-
-    await asyncio.gather(*tasks)
-
+    logger.info("[MAIN] Khởi chạy Bot chính Jet Jet bi sun rang...")
+    await bot.start(TOKEN)
 
 if __name__ == "__main__":
     asyncio.run(main())
