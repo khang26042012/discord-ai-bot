@@ -354,6 +354,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.members = True
+intents.voice_states = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
@@ -402,6 +403,13 @@ async def on_ready():
     # File-based storage (no database needed)
     logger.info("✅ Using JSON file storage (no database)")
     
+    # Nạp module Âm nhạc độc quyền (music.py)
+    if "music" not in bot.extensions:
+        try:
+            await bot.load_extension("music")
+            logger.info("✅ Đã nạp thành công module Âm nhạc độc quyền (music.py)!")
+        except Exception as e:
+            logger.error(f"Failed to load music extension: {e}")
     
     # Sync slash commands
     try:
